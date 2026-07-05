@@ -17,10 +17,11 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProviderStateMixin {
+class _AdminDashboardState extends State<AdminDashboard>
+    with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   late TabController _tabController;
-  
+
   final List<Widget> _screens = [
     const _AdminHomeScreen(),
     const ManageDepartmentsScreen(),
@@ -40,7 +41,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
         });
       }
     });
-    
+
     // Load initial data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final adminProvider = Provider.of<AdminProvider>(context, listen: false);
@@ -48,7 +49,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
       adminProvider.loadAllCourses();
       adminProvider.loadStudents();
       adminProvider.loadStaff();
-      final reportProvider = Provider.of<ReportProvider>(context, listen: false);
+      final reportProvider =
+          Provider.of<ReportProvider>(context, listen: false);
       reportProvider.loadAllReports();
     });
   }
@@ -141,7 +143,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                       children: [
                         Icon(Icons.logout, size: 18, color: Colors.red),
                         SizedBox(width: 8),
-                        Text('Logout', style: TextStyle(fontSize: 12, color: Colors.red)),
+                        Text('Logout',
+                            style: TextStyle(fontSize: 12, color: Colors.red)),
                       ],
                     ),
                   ),
@@ -207,9 +210,9 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
   void _showProfileDialog(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.currentUser;
-    
+
     if (user == null) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -222,7 +225,7 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 color: AppConstants.primaryColor.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.person,
                 color: AppConstants.primaryColor,
                 size: 28,
@@ -299,19 +302,27 @@ class _AdminHomeScreen extends StatelessWidget {
     final adminProvider = Provider.of<AdminProvider>(context);
     final reportProvider = Provider.of<ReportProvider>(context);
     final user = authProvider.currentUser;
-    
+
     // Count statistics
     int totalStudents = adminProvider.students.length;
     int totalStaff = adminProvider.staff.length;
     int totalReports = reportProvider.reports.length;
-    int pendingReports = reportProvider.reports.where((r) => r.status == 'pending').length;
-    int activeDepartments = adminProvider.departments.where((d) => d.isActive).length;
-    int activeCourses = adminProvider.allCourses.where((c) => c.isActive).length;
-    
+    int pendingReports =
+        reportProvider.reports.where((r) => r.status == 'pending').length;
+    int activeDepartments =
+        adminProvider.departments.where((d) => d.isActive).length;
+    int activeCourses =
+        adminProvider.allCourses.where((c) => c.isActive).length;
+
+    // 👇 Calculate card width once
+    double cardWidth = (MediaQuery.of(context).size.width - 56) / 4;
+
     return RefreshIndicator(
       onRefresh: () async {
-        final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-        final reportProvider = Provider.of<ReportProvider>(context, listen: false);
+        final adminProvider =
+            Provider.of<AdminProvider>(context, listen: false);
+        final reportProvider =
+            Provider.of<ReportProvider>(context, listen: false);
         await Future.wait([
           adminProvider.loadDepartments(),
           adminProvider.loadAllCourses(),
@@ -331,7 +342,7 @@ class _AdminHomeScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [
                     AppConstants.primaryColor,
                     AppConstants.primaryLight,
@@ -396,7 +407,8 @@ class _AdminHomeScreen extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -416,9 +428,9 @@ class _AdminHomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Statistics Grid
             Row(
               children: [
@@ -463,9 +475,9 @@ class _AdminHomeScreen extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Management Summary
             Container(
               padding: const EdgeInsets.all(16),
@@ -518,9 +530,9 @@ class _AdminHomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Quick Actions
             const Text(
               'Quick Actions',
@@ -539,7 +551,8 @@ class _AdminHomeScreen extends StatelessWidget {
                   Icons.business,
                   AppConstants.primaryColor,
                   () {
-                    final parent = context.findAncestorStateOfType<_AdminDashboardState>();
+                    final parent =
+                        context.findAncestorStateOfType<_AdminDashboardState>();
                     if (parent != null) {
                       parent.setState(() {
                         parent._currentIndex = 1;
@@ -547,13 +560,15 @@ class _AdminHomeScreen extends StatelessWidget {
                       });
                     }
                   },
+                  cardWidth, // ✅ pass width
                 ),
                 _buildQuickActionCard(
                   'Manage Courses',
                   Icons.book,
                   Colors.purple,
                   () {
-                    final parent = context.findAncestorStateOfType<_AdminDashboardState>();
+                    final parent =
+                        context.findAncestorStateOfType<_AdminDashboardState>();
                     if (parent != null) {
                       parent.setState(() {
                         parent._currentIndex = 2;
@@ -561,13 +576,15 @@ class _AdminHomeScreen extends StatelessWidget {
                       });
                     }
                   },
+                  cardWidth,
                 ),
                 _buildQuickActionCard(
                   'Manage Users',
                   Icons.people,
                   Colors.teal,
                   () {
-                    final parent = context.findAncestorStateOfType<_AdminDashboardState>();
+                    final parent =
+                        context.findAncestorStateOfType<_AdminDashboardState>();
                     if (parent != null) {
                       parent.setState(() {
                         parent._currentIndex = 3;
@@ -575,13 +592,15 @@ class _AdminHomeScreen extends StatelessWidget {
                       });
                     }
                   },
+                  cardWidth,
                 ),
                 _buildQuickActionCard(
                   'View Reports',
                   Icons.report,
                   Colors.green,
                   () {
-                    final parent = context.findAncestorStateOfType<_AdminDashboardState>();
+                    final parent =
+                        context.findAncestorStateOfType<_AdminDashboardState>();
                     if (parent != null) {
                       parent.setState(() {
                         parent._currentIndex = 4;
@@ -589,12 +608,13 @@ class _AdminHomeScreen extends StatelessWidget {
                       });
                     }
                   },
+                  cardWidth,
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Recent Activity / System Info
             Container(
               padding: const EdgeInsets.all(16),
@@ -612,7 +632,7 @@ class _AdminHomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
                       Icon(
                         Icons.info_outline,
@@ -634,13 +654,14 @@ class _AdminHomeScreen extends StatelessWidget {
                   _buildInfoRow('App Version', AppConstants.appVersion),
                   _buildInfoRow('Database', 'Firebase Firestore'),
                   _buildInfoRow('Total Reports', totalReports.toString()),
-                  _buildInfoRow('Active Users', (totalStudents + totalStaff).toString()),
+                  _buildInfoRow(
+                      'Active Users', (totalStudents + totalStaff).toString()),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Footer
             Center(
               child: Text(
@@ -658,7 +679,9 @@ class _AdminHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  // ---------- Helper methods ----------
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -710,7 +733,8 @@ class _AdminHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryItem(IconData icon, String label, String value, Color color) {
+  Widget _buildSummaryItem(
+      IconData icon, String label, String value, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(10),
@@ -745,13 +769,18 @@ class _AdminHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildQuickActionCard(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+    double width, // ✅ now accepts width
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        // FIXED: Use MediaQuery.of(context) instead of context()
-        width: (MediaQuery.of(GetContext()).size.width - 56) / 4,
+        width: width,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -790,14 +819,6 @@ class _AdminHomeScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  // Helper method to get context for MediaQuery
-  BuildContext GetContext() {
-    // This method is used to get the current build context
-    // In a real scenario, you should pass context as a parameter
-    // This is a workaround for the issue
-    throw Exception('This method should not be called. Use context parameter instead.');
   }
 
   Widget _buildInfoRow(String label, String value) {

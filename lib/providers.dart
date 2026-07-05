@@ -1,6 +1,8 @@
 // lib/providers.dart
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'models.dart';
 import 'repositories.dart';
@@ -9,30 +11,30 @@ import 'constants.dart'; // Added missing import for AppConstants
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _repository = AuthRepository();
-  
+
   bool _isLoading = false;
   String? _error;
   UserModel? _currentUser;
-  
+
   bool get isLoading => _isLoading;
   String? get error => _error;
   UserModel? get currentUser => _currentUser;
-  
+
   Future<bool> login(String regNo, String password) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       _currentUser = await _repository.login(regNo, password);
-      
+
       await SessionManager.saveUserData(
         userId: _currentUser!.id,
         regNo: _currentUser!.regNo,
         role: _currentUser!.role,
         departmentId: _currentUser!.departmentId,
       );
-      
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -43,19 +45,20 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<void> logout() async {
     await _repository.logout();
     await SessionManager.logout();
     _currentUser = null;
     notifyListeners();
   }
-  
-  Future<bool> resetPassword(String email, String phone, String newPassword) async {
+
+  Future<bool> resetPassword(
+      String email, String phone, String newPassword) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.resetPassword(email, phone, newPassword);
       _isLoading = false;
@@ -72,34 +75,34 @@ class AuthProvider extends ChangeNotifier {
 
 class ReportProvider extends ChangeNotifier {
   final ReportRepository _repository = ReportRepository();
-  
+
   List<ReportModel> _reports = [];
   bool _isLoading = false;
   String? _error;
-  
+
   List<ReportModel> get reports => _reports;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  
+
   void listenToReports(String departmentId) {
     _repository.getReportsForDepartment(departmentId).listen((reports) {
       _reports = reports;
       notifyListeners();
     });
   }
-  
+
   void listenToUserReports(String userId) {
     _repository.getReportsByUser(userId).listen((reports) {
       _reports = reports;
       notifyListeners();
     });
   }
-  
+
   Future<bool> submitReport(ReportModel report) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.submitReport(report);
       _isLoading = false;
@@ -112,16 +115,17 @@ class ReportProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<String> uploadAttachment(File file) async {
     return await _repository.uploadAttachment(file);
   }
-  
-  Future<bool> updateReportStatus(String reportId, String status, String response) async {
+
+  Future<bool> updateReportStatus(
+      String reportId, String status, String response) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.updateReportStatus(reportId, status, response);
       _isLoading = false;
@@ -134,12 +138,12 @@ class ReportProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<void> loadAllReports() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       _reports = await _repository.getAllReports();
       _isLoading = false;
@@ -154,7 +158,7 @@ class ReportProvider extends ChangeNotifier {
 
 class AdminProvider extends ChangeNotifier {
   final AdminRepository _repository = AdminRepository();
-  
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<DepartmentModel> _departments = [];
   List<CourseModel> _courses = [];
   List<CourseModel> _allCourses = [];
@@ -162,7 +166,7 @@ class AdminProvider extends ChangeNotifier {
   List<UserModel> _staff = [];
   bool _isLoading = false;
   String? _error;
-  
+
   List<DepartmentModel> get departments => _departments;
   List<CourseModel> get courses => _courses;
   List<CourseModel> get allCourses => _allCourses;
@@ -170,13 +174,77 @@ class AdminProvider extends ChangeNotifier {
   List<UserModel> get staff => _staff;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  
+
+  // Add this getter
+  List<UserModel> get admins => _admins; // define _admins list at top
+  List<UserModel> _admins = [];
+
+// Add this method to load admins
+Future<void> loadAdmins() async {
+  _isLoading = true;
+  _error = null;
+  notifyListeners();
+
+  try {
+    _admins = await _repository.getUsersByRole(AppConstants.roleAdmin);
+    print('✅ Admins loaded: ${_admins.length}');  // 👈 debug
+    _isLoading = false;
+    notifyListeners();
+  } catch (e) {
+    _error = e.toString();
+    _isLoading = false;
+    notifyListeners();
+    print('❌ Error loading admins: $e');
+  }
+}
+
+// Add a method to register admin (optional)
+  Future<String?> registerAdmin(Map<String, dynamic> adminData) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Generate regNo: NIT/ADMIN/YYYY/XXXX
+      // You need a counter for admin as well, or use a simple timestamp.
+      // For simplicity, we'll generate a random number.
+      String regNo =
+          'NIT/ADMIN/${DateTime.now().year}/${DateTime.now().millisecondsSinceEpoch}';
+      // Truncate to keep consistent format
+      regNo = regNo.substring(0, 18);
+
+      // Store in Firestore
+      await _firestore.collection(AppConstants.usersCollection).add({
+        ...adminData,
+        'regNo': regNo,
+        'role': AppConstants.roleAdmin,
+        'status': AppConstants.statusActive,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      // Also create Firebase Auth user with the provided password
+      // adminData should contain 'email' and 'password'
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: adminData['email'],
+        password: adminData['password'],
+      );
+      await loadAdmins();
+      _isLoading = false;
+      notifyListeners();
+      return regNo;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
   // Department Methods
   Future<void> loadDepartments() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       _departments = await _repository.getDepartments();
       _isLoading = false;
@@ -187,12 +255,12 @@ class AdminProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   Future<bool> registerDepartment(DepartmentModel department) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.registerDepartment(department);
       await loadDepartments();
@@ -206,12 +274,12 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<bool> updateDepartment(String id, Map<String, dynamic> data) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.updateDepartment(id, data);
       await loadDepartments();
@@ -225,12 +293,12 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<bool> deleteDepartment(String id) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.deleteDepartment(id);
       await loadDepartments();
@@ -244,12 +312,12 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<bool> toggleDepartmentStatus(String id, bool active) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.toggleDepartmentStatus(id, active);
       await loadDepartments();
@@ -263,13 +331,13 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // Course Methods
   Future<void> loadAllCourses() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       _allCourses = await _repository.getAllCourses();
       _isLoading = false;
@@ -280,12 +348,12 @@ class AdminProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   Future<void> loadCourses(String departmentId) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       _courses = await _repository.getCoursesByDepartment(departmentId);
       _isLoading = false;
@@ -296,12 +364,12 @@ class AdminProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   Future<bool> registerCourse(CourseModel course) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.registerCourse(course);
       await loadCourses(course.departmentId);
@@ -316,12 +384,12 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<bool> updateCourse(String id, Map<String, dynamic> data) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.updateCourse(id, data);
       await loadAllCourses();
@@ -335,12 +403,12 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<bool> deleteCourse(String id) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.deleteCourse(id);
       await loadAllCourses();
@@ -354,12 +422,12 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<bool> toggleCourseStatus(String id, bool active) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.toggleCourseStatus(id, active);
       await loadAllCourses();
@@ -373,13 +441,13 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // User Methods
   Future<void> loadStudents() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       _students = await _repository.getUsersByRole(AppConstants.roleStudent);
       _isLoading = false;
@@ -390,12 +458,12 @@ class AdminProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   Future<void> loadStaff() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       _staff = await _repository.getUsersByRole(AppConstants.roleStaff);
       _isLoading = false;
@@ -406,12 +474,12 @@ class AdminProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   Future<String?> registerStudent(StudentData student) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       String regNo = await _repository.registerStudent(student);
       await loadStudents();
@@ -425,12 +493,12 @@ class AdminProvider extends ChangeNotifier {
       return null;
     }
   }
-  
+
   Future<String?> registerStaff(StaffData staff) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       String regNo = await _repository.registerStaff(staff);
       await loadStaff();
@@ -444,12 +512,12 @@ class AdminProvider extends ChangeNotifier {
       return null;
     }
   }
-  
+
   Future<bool> updateUser(String id, Map<String, dynamic> data) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.updateUser(id, data);
       await loadStudents();
@@ -464,12 +532,12 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<bool> deleteUser(String id) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.deleteUser(id);
       await loadStudents();
@@ -484,12 +552,12 @@ class AdminProvider extends ChangeNotifier {
       return false;
     }
   }
-  
+
   Future<bool> toggleUserStatus(String id, bool active) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await _repository.toggleUserStatus(id, active);
       await loadStudents();
@@ -509,7 +577,7 @@ class AdminProvider extends ChangeNotifier {
 class StudentProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
-  
+
   bool get isLoading => _isLoading;
   String? get error => _error;
 }
@@ -517,7 +585,7 @@ class StudentProvider extends ChangeNotifier {
 class StaffProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
-  
+
   bool get isLoading => _isLoading;
   String? get error => _error;
 }

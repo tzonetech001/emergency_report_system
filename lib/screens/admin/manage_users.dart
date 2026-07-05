@@ -1,12 +1,11 @@
 // lib/screens/admin/manage_users.dart
+import 'package:emergency_report_system/repositories.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers.dart';
 import '../../constants.dart';
 import '../../models.dart';
 import '../../utils.dart';
-import 'register_student_popup.dart';
-import 'register_staff_popup.dart';
 
 class ManageUsersScreen extends StatefulWidget {
   const ManageUsersScreen({super.key});
@@ -15,19 +14,28 @@ class ManageUsersScreen extends StatefulWidget {
   State<ManageUsersScreen> createState() => _ManageUsersScreenState();
 }
 
-class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTickerProviderStateMixin {
+class _ManageUsersScreenState extends State<ManageUsersScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // 3 tabs
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-      adminProvider.loadDepartments();
-      adminProvider.loadStudents();
-      adminProvider.loadStaff();
+      _loadAllData(adminProvider);
     });
+  }
+
+  Future<void> _loadAllData(AdminProvider adminProvider) async {
+    await Future.wait([
+      adminProvider.loadDepartments(),
+      adminProvider.loadAllCourses(),
+      adminProvider.loadStudents(),
+      adminProvider.loadStaff(),
+      adminProvider.loadAdmins(), // we'll add this method
+    ]);
   }
 
   @override
@@ -39,7 +47,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final adminProvider = Provider.of<AdminProvider>(context);
-    
+    final students = adminProvider.students;
+    final staff = adminProvider.staff;
+    final admins = adminProvider.admins; // we'll add this getter
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -55,6 +66,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
           tabs: const [
             Tab(text: 'Students'),
             Tab(text: 'Staff'),
+            Tab(text: 'Admins'),
           ],
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
@@ -64,17 +76,28 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
           IconButton(
             icon: const Icon(Icons.add, size: 24),
             onPressed: () {
-              if (_tabController.index == 0) {
-                showDialog(
-                  context: context,
-                  builder: (context) => const RegisterStudentPopup(),
-                );
+              final index = _tabController.index;
+              if (index == 0) {
+                _showRegisterStudentDialog();
+              } else if (index == 1) {
+                _showRegisterStaffDialog();
               } else {
-                showDialog(
-                  context: context,
-                  builder: (context) => const RegisterStaffPopup(),
-                );
+                _showRegisterAdminDialog();
               }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 24),
+            onPressed: () async {
+              final provider =
+                  Provider.of<AdminProvider>(context, listen: false);
+              await _loadAllData(provider);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Refreshed!'),
+                  backgroundColor: AppConstants.successColor,
+                ),
+              );
             },
           ),
         ],
@@ -82,60 +105,87 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildUserList(adminProvider.students, 'student'),
-          _buildUserList(adminProvider.staff, 'staff'),
+          _buildUserList(students, 'student'),
+          _buildUserList(staff, 'staff'),
+          _buildUserList(admins, 'admin'),
         ],
       ),
     );
   }
 
+  // ---------- USER LIST ----------
   Widget _buildUserList(List<UserModel> users, String role) {
-    return users.isEmpty
-        ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  role == 'student' ? Icons.people : Icons.person,
-                  size: 80,
-                  color: Colors.grey[300],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No ${role == 'student' ? 'Students' : 'Staff'} Registered',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[500],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Tap + to register a new ${role == 'student' ? 'student' : 'staff'}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[400],
-                  ),
-                ),
-              ],
+    if (users.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              role == 'student'
+                  ? Icons.people
+                  : role == 'staff'
+                      ? Icons.person
+                      : Icons.admin_panel_settings,
+              size: 80,
+              color: Colors.grey[300],
             ),
-          )
-        : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-              return _buildUserCard(user);
-            },
-          );
+            const SizedBox(height: 16),
+            Text(
+              'No ${_roleName(role)} Registered',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tap + to register a new ${_roleName(role).toLowerCase()}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[400],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: () async {
+        final provider = Provider.of<AdminProvider>(context, listen: false);
+        await _loadAllData(provider);
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: users.length,
+        itemBuilder: (context, index) {
+          final user = users[index];
+          return _buildUserCard(user);
+        },
+      ),
+    );
   }
 
+  String _roleName(String role) {
+    switch (role) {
+      case 'student':
+        return 'Students';
+      case 'staff':
+        return 'Staff';
+      case 'admin':
+        return 'Admins';
+      default:
+        return 'Users';
+    }
+  }
+
+  // ---------- USER CARD ----------
   Widget _buildUserCard(UserModel user) {
-    // Extract course/department code from regNo
+    // Extract code from regNo
     String regNoParts = user.regNo;
     List<String> parts = regNoParts.split('/');
     String code = parts.length > 1 ? parts[1] : '';
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -149,8 +199,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
             offset: const Offset(0, 2),
           ),
         ],
-        border: user.isActive 
-            ? null 
+        border: user.isActive
+            ? null
             : Border.all(color: Colors.red.withOpacity(0.3)),
       ),
       child: Row(
@@ -159,8 +209,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: user.isActive 
-                  ? AppConstants.primaryColor.withOpacity(0.1) 
+              color: user.isActive
+                  ? AppConstants.primaryColor.withOpacity(0.1)
                   : Colors.grey.withOpacity(0.2),
               borderRadius: BorderRadius.circular(10),
             ),
@@ -170,8 +220,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: user.isActive 
-                      ? AppConstants.primaryColor 
+                  color: user.isActive
+                      ? AppConstants.primaryColor
                       : Colors.grey[600],
                 ),
               ),
@@ -195,19 +245,22 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
                     Icon(
                       Icons.badge,
                       size: 12,
-                      color: user.isActive ? Colors.grey[500] : Colors.grey[400],
+                      color:
+                          user.isActive ? Colors.grey[500] : Colors.grey[400],
                     ),
                     const SizedBox(width: 4),
                     Text(
                       user.regNo,
                       style: TextStyle(
                         fontSize: 11,
-                        color: user.isActive ? Colors.grey[500] : Colors.grey[400],
+                        color:
+                            user.isActive ? Colors.grey[500] : Colors.grey[400],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
                         color: AppConstants.primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -221,12 +274,30 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        user.role.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 if (!user.isActive)
                   Container(
                     margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
@@ -276,92 +347,42 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
     );
   }
 
+  // ---------- EDIT USER ----------
   void _showEditUserDialog(UserModel user) {
-    final TextEditingController firstNameController = TextEditingController(text: user.firstName);
-    final TextEditingController middleNameController = TextEditingController(text: user.middleName);
-    final TextEditingController lastNameController = TextEditingController(text: user.lastName);
-    final TextEditingController emailController = TextEditingController(text: user.email);
-    final TextEditingController phoneController = TextEditingController(text: user.phone);
-    
+    final firstNameController = TextEditingController(text: user.firstName);
+    final middleNameController = TextEditingController(text: user.middleName);
+    final lastNameController = TextEditingController(text: user.lastName);
+    final emailController = TextEditingController(text: user.email);
+    final phoneController = TextEditingController(text: user.phone);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Edit User',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Edit User',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: firstNameController,
-                style: const TextStyle(fontSize: 12),
-                decoration: const InputDecoration(
-                  labelText: 'First Name',
-                  labelStyle: TextStyle(fontSize: 12),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: middleNameController,
-                style: const TextStyle(fontSize: 12),
-                decoration: const InputDecoration(
-                  labelText: 'Middle Name',
-                  labelStyle: TextStyle(fontSize: 12),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: lastNameController,
-                style: const TextStyle(fontSize: 12),
-                decoration: const InputDecoration(
-                  labelText: 'Last Name',
-                  labelStyle: TextStyle(fontSize: 12),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: emailController,
-                style: const TextStyle(fontSize: 12),
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  labelStyle: TextStyle(fontSize: 12),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneController,
-                style: const TextStyle(fontSize: 12),
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  labelStyle: TextStyle(fontSize: 12),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
+              _buildTextField(firstNameController, 'First Name'),
+              _buildTextField(middleNameController, 'Middle Name'),
+              _buildTextField(lastNameController, 'Last Name'),
+              _buildTextField(emailController, 'Email',
+                  keyboardType: TextInputType.emailAddress),
+              _buildTextField(phoneController, 'Phone Number',
+                  keyboardType: TextInputType.phone),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(fontSize: 12)),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+              final provider =
+                  Provider.of<AdminProvider>(context, listen: false);
               Map<String, dynamic> data = {
                 'firstName': firstNameController.text.trim(),
                 'middleName': middleNameController.text.trim(),
@@ -369,43 +390,34 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
                 'email': emailController.text.trim(),
                 'phone': phoneController.text.trim(),
               };
-              bool success = await adminProvider.updateUser(user.id, data);
+              bool success = await provider.updateUser(user.id, data);
               if (success) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('User updated successfully!'),
-                    backgroundColor: AppConstants.successColor,
-                  ),
+                      content: Text('User updated!'),
+                      backgroundColor: AppConstants.successColor),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Update', style: TextStyle(fontSize: 12)),
+                backgroundColor: AppConstants.primaryColor),
+            child: const Text('Update'),
           ),
         ],
       ),
     );
   }
 
+  // ---------- TOGGLE / DELETE ----------
   void _toggleUserStatus(UserModel user) async {
-    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-    bool success = await adminProvider.toggleUserStatus(
-      user.id, 
-      !user.isActive
-    );
-    
+    final provider = Provider.of<AdminProvider>(context, listen: false);
+    bool success = await provider.toggleUserStatus(user.id, !user.isActive);
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            user.isActive 
-                ? 'User deactivated successfully!' 
-                : 'User activated successfully!'
-          ),
+          content:
+              Text(user.isActive ? 'User deactivated!' : 'User activated!'),
           backgroundColor: AppConstants.successColor,
         ),
       );
@@ -416,39 +428,409 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> with SingleTicker
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete User'),
-        content: Text(
-          'Are you sure you want to delete "${user.fullName}"?',
-          style: const TextStyle(fontSize: 12),
-        ),
+        content: Text('Delete "${user.fullName}"?',
+            style: const TextStyle(fontSize: 12)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(fontSize: 12)),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-              bool success = await adminProvider.deleteUser(user.id);
-              
+              final provider =
+                  Provider.of<AdminProvider>(context, listen: false);
+              bool success = await provider.deleteUser(user.id);
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('User deleted successfully!'),
-                    backgroundColor: AppConstants.successColor,
-                  ),
+                      content: Text('User deleted!'),
+                      backgroundColor: AppConstants.successColor),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.errorColor,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete', style: TextStyle(fontSize: 12)),
+                backgroundColor: AppConstants.errorColor),
+            child: const Text('Delete'),
           ),
         ],
+      ),
+    );
+  }
+
+  // ---------- REGISTER STUDENT (with course dropdown) ----------
+  void _showRegisterStudentDialog() {
+    final firstNameCtrl = TextEditingController();
+    final middleNameCtrl = TextEditingController();
+    final lastNameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    String? selectedDepartmentId;
+    String? selectedCourseId;
+    String selectedYear = DateTime.now().year.toString();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final adminProvider = Provider.of<AdminProvider>(context);
+          final departments =
+              adminProvider.departments.where((d) => d.isActive).toList();
+          final courses = adminProvider.allCourses
+              .where(
+                  (c) => c.departmentId == selectedDepartmentId && c.isActive)
+              .toList();
+
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Register Student',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTextField(firstNameCtrl, 'First Name'),
+                  _buildTextField(middleNameCtrl, 'Middle Name'),
+                  _buildTextField(lastNameCtrl, 'Last Name'),
+                  _buildTextField(emailCtrl, 'Email',
+                      keyboardType: TextInputType.emailAddress),
+                  _buildTextField(phoneCtrl, 'Phone Number',
+                      keyboardType: TextInputType.phone),
+                  // Department dropdown
+                  DropdownButtonFormField<String>(
+                    value: selectedDepartmentId,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: const InputDecoration(
+                      labelText: 'Department',
+                      labelStyle: TextStyle(fontSize: 12),
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: departments.map((d) {
+                      return DropdownMenuItem(value: d.id, child: Text(d.name));
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedDepartmentId = value;
+                        selectedCourseId = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // Course dropdown
+                  DropdownButtonFormField<String>(
+                    value: selectedCourseId,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: const InputDecoration(
+                      labelText: 'Course',
+                      labelStyle: TextStyle(fontSize: 12),
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: courses.map((c) {
+                      return DropdownMenuItem(value: c.id, child: Text(c.name));
+                    }).toList(),
+                    onChanged: (value) =>
+                        setState(() => selectedCourseId = value),
+                  ),
+                  const SizedBox(height: 12),
+                  // Year dropdown (2024-2030)
+                  DropdownButtonFormField<String>(
+                    value: selectedYear,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: const InputDecoration(
+                      labelText: 'Year of Registration',
+                      labelStyle: TextStyle(fontSize: 12),
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: List.generate(7, (i) {
+                      int year = DateTime.now().year + i;
+                      return DropdownMenuItem(
+                          value: year.toString(), child: Text(year.toString()));
+                    }),
+                    onChanged: (value) => setState(() => selectedYear = value!),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (firstNameCtrl.text.isEmpty ||
+                      lastNameCtrl.text.isEmpty ||
+                      emailCtrl.text.isEmpty ||
+                      phoneCtrl.text.isEmpty ||
+                      selectedDepartmentId == null ||
+                      selectedCourseId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Please fill all fields'),
+                          backgroundColor: AppConstants.errorColor),
+                    );
+                    return;
+                  }
+                  final provider =
+                      Provider.of<AdminProvider>(context, listen: false);
+                  // Get course code from selected course
+                  final course = provider.allCourses
+                      .firstWhere((c) => c.id == selectedCourseId);
+                  final student = StudentData(
+                    firstName: firstNameCtrl.text.trim(),
+                    middleName: middleNameCtrl.text.trim(),
+                    lastName: lastNameCtrl.text.trim(),
+                    email: emailCtrl.text.trim(),
+                    phone: phoneCtrl.text.trim(),
+                    departmentId: selectedDepartmentId!,
+                    courseId: selectedCourseId!,
+                    courseCode: course.code,
+                    year: int.parse(selectedYear),
+                  );
+                  String? regNo = await provider.registerStudent(student);
+                  if (regNo != null) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text('Student registered! RegNo: $regNo'),
+                          backgroundColor: AppConstants.successColor),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppConstants.primaryColor),
+                child: const Text('Register'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // ---------- REGISTER STAFF ----------
+  void _showRegisterStaffDialog() {
+    final firstNameCtrl = TextEditingController();
+    final middleNameCtrl = TextEditingController();
+    final lastNameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    String? selectedDepartmentId;
+    String selectedYear = DateTime.now().year.toString();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final adminProvider = Provider.of<AdminProvider>(context);
+          final departments =
+              adminProvider.departments.where((d) => d.isActive).toList();
+
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Register Staff',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTextField(firstNameCtrl, 'First Name'),
+                  _buildTextField(middleNameCtrl, 'Middle Name'),
+                  _buildTextField(lastNameCtrl, 'Last Name'),
+                  _buildTextField(emailCtrl, 'Email',
+                      keyboardType: TextInputType.emailAddress),
+                  _buildTextField(phoneCtrl, 'Phone Number',
+                      keyboardType: TextInputType.phone),
+                  DropdownButtonFormField<String>(
+                    value: selectedDepartmentId,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: const InputDecoration(
+                      labelText: 'Department',
+                      labelStyle: TextStyle(fontSize: 12),
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: departments.map((d) {
+                      return DropdownMenuItem(value: d.id, child: Text(d.name));
+                    }).toList(),
+                    onChanged: (value) =>
+                        setState(() => selectedDepartmentId = value),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedYear,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: const InputDecoration(
+                      labelText: 'Year of Registration',
+                      labelStyle: TextStyle(fontSize: 12),
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: List.generate(7, (i) {
+                      int year = DateTime.now().year + i;
+                      return DropdownMenuItem(
+                          value: year.toString(), child: Text(year.toString()));
+                    }),
+                    onChanged: (value) => setState(() => selectedYear = value!),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (firstNameCtrl.text.isEmpty ||
+                      lastNameCtrl.text.isEmpty ||
+                      emailCtrl.text.isEmpty ||
+                      phoneCtrl.text.isEmpty ||
+                      selectedDepartmentId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Please fill all fields'),
+                          backgroundColor: AppConstants.errorColor),
+                    );
+                    return;
+                  }
+                  final provider =
+                      Provider.of<AdminProvider>(context, listen: false);
+                  final dept = provider.departments
+                      .firstWhere((d) => d.id == selectedDepartmentId);
+                  final staff = StaffData(
+                    firstName: firstNameCtrl.text.trim(),
+                    middleName: middleNameCtrl.text.trim(),
+                    lastName: lastNameCtrl.text.trim(),
+                    email: emailCtrl.text.trim(),
+                    phone: phoneCtrl.text.trim(),
+                    departmentId: selectedDepartmentId!,
+                    departmentCode: dept.code,
+                    year: int.parse(selectedYear),
+                  );
+                  String? regNo = await provider.registerStaff(staff);
+                  if (regNo != null) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text('Staff registered! RegNo: $regNo'),
+                          backgroundColor: AppConstants.successColor),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppConstants.primaryColor),
+                child: const Text('Register'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // ---------- REGISTER ADMIN ----------
+  void _showRegisterAdminDialog() {
+    final firstNameCtrl = TextEditingController();
+    final middleNameCtrl = TextEditingController();
+    final lastNameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Register Admin',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTextField(firstNameCtrl, 'First Name'),
+              _buildTextField(middleNameCtrl, 'Middle Name'),
+              _buildTextField(lastNameCtrl, 'Last Name'),
+              _buildTextField(emailCtrl, 'Email',
+                  keyboardType: TextInputType.emailAddress),
+              _buildTextField(phoneCtrl, 'Phone Number',
+                  keyboardType: TextInputType.phone),
+              _buildTextField(passwordCtrl, 'Password', obscureText: true),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (firstNameCtrl.text.isEmpty ||
+                  lastNameCtrl.text.isEmpty ||
+                  emailCtrl.text.isEmpty ||
+                  phoneCtrl.text.isEmpty ||
+                  passwordCtrl.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please fill all fields'),
+                      backgroundColor: AppConstants.errorColor),
+                );
+                return;
+              }
+              // Generate regNo for admin: NIT/ADMIN/YYYY/XXXX
+              // We'll get a sequence from a counter or generate manually.
+              // For simplicity, we'll create a unique regNo using timestamp.
+              // In production, you should use a proper counter.
+              final timestamp = DateTime.now().millisecondsSinceEpoch;
+              String regNo = 'NIT/ADMIN/${DateTime.now().year}/$timestamp'
+                  .substring(0, 18);
+
+              // Create a user map and save via adminProvider.registerAdmin (we'll add)
+              // Since we don't have registerAdmin in provider yet, we'll use a workaround:
+              // We can create a user document with role 'admin' and also create Firebase Auth user.
+              // We'll add a method in AdminProvider.
+              // For now, we'll just show a message.
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content: Text(
+                        'Admin registration not implemented yet. Add method in AdminProvider.')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor),
+            child: const Text('Register'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------- HELPER TEXTFIELD ----------
+  Widget _buildTextField(TextEditingController controller, String label,
+      {TextInputType? keyboardType, bool obscureText = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        style: const TextStyle(fontSize: 12),
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(fontSize: 12),
+          border: const OutlineInputBorder(),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
       ),
     );
   }

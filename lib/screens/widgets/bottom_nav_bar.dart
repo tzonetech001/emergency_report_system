@@ -18,7 +18,8 @@ class BottomNavBar extends StatefulWidget {
   State<BottomNavBar> createState() => _BottomNavBarState();
 }
 
-class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderStateMixin {
+class _BottomNavBarState extends State<BottomNavBar>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
 
   @override
@@ -42,12 +43,12 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 80,
+      height: 75,
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -58,7 +59,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
         children: [
           // Half Circle Watermark Background
           Positioned(
-            top: -30,
+            top: -25,
             left: 0,
             right: 0,
             child: Center(
@@ -68,22 +69,22 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
                   return Transform.scale(
                     scale: 0.5 + (0.5 * _animationController.value),
                     child: Container(
-                      width: 100,
-                      height: 50,
+                      width: 80,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: AppConstants.primaryColor.withOpacity(0.15),
+                        color: AppConstants.primaryColor.withOpacity(0.1),
                         borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(50),
-                          topRight: Radius.circular(50),
+                          topLeft: Radius.circular(40),
+                          topRight: Radius.circular(40),
                         ),
                       ),
                       child: Center(
                         child: Opacity(
-                          opacity: 0.3,
+                          opacity: 0.2,
                           child: Text(
                             'NIT',
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: AppConstants.primaryColor,
                             ),
@@ -96,7 +97,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
               ),
             ),
           ),
-          
+
           // Navigation Items
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -112,7 +113,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
   Widget _buildNavItem(int index) {
     final item = widget.items[index];
     final isSelected = widget.currentIndex == index;
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -131,10 +132,10 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
               scale: isSelected ? 1.2 : 1.0,
               duration: const Duration(milliseconds: 300),
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected 
+                  color: isSelected
                       ? AppConstants.primaryColor.withOpacity(0.15)
                       : Colors.transparent,
                 ),
@@ -145,12 +146,12 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 300),
               style: TextStyle(
                 fontSize: 10,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: isSelected ? AppConstants.primaryColor : Colors.grey[400],
               ),
               child: Text(item.label),
@@ -160,7 +161,7 @@ class _BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSt
                 duration: const Duration(milliseconds: 300),
                 margin: const EdgeInsets.only(top: 2),
                 height: 3,
-                width: 16,
+                width: 20,
                 decoration: BoxDecoration(
                   color: AppConstants.primaryColor,
                   borderRadius: BorderRadius.circular(2),

@@ -185,6 +185,7 @@ class ReportModel {
   final String status;
   final String response;
   final String? attachmentUrl;
+  final Map<String, dynamic>? location;
   final DateTime createdAt;
   final DateTime
       updatedAt; // non‑nullable, but we supply a default in fromFirestore
@@ -200,6 +201,7 @@ class ReportModel {
     required this.status,
     required this.response,
     this.attachmentUrl,
+    this.location,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -217,6 +219,7 @@ class ReportModel {
       status: data['status'] ?? 'pending',
       response: data['response'] ?? '',
       attachmentUrl: data['attachmentUrl'],
+      location: data['location'] as Map<String, dynamic>?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -233,6 +236,7 @@ class ReportModel {
       'status': status,
       'response': response,
       'attachmentUrl': attachmentUrl,
+      if (location != null) 'location': location,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };

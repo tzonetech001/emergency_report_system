@@ -7,7 +7,8 @@ import '../../models.dart';
 import '../../utils.dart';
 
 class MyReportsScreen extends StatefulWidget {
-  const MyReportsScreen({super.key});
+  final bool embedded;
+  const MyReportsScreen({super.key, this.embedded = false});
 
   @override
   State<MyReportsScreen> createState() => _MyReportsScreenState();
@@ -17,19 +18,34 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final reportProvider = Provider.of<ReportProvider>(context, listen: false);
-      if (authProvider.currentUser != null) {
-        reportProvider.listenToUserReports(authProvider.currentUser!.id);
-      }
-    });
+    // If not embedded, we can load reports here; but the dashboard already does that
+    // We'll rely on the provider's data.
   }
 
   @override
   Widget build(BuildContext context) {
     final reportProvider = Provider.of<ReportProvider>(context);
-    
+    final reports = reportProvider.reports;
+
+    // Build content
+    Widget content = reportProvider.isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : reports.isEmpty
+            ? _buildEmptyState()
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: reports.length,
+                itemBuilder: (context, index) {
+                  final report = reports[index];
+                  return _buildReportCard(report);
+                },
+              );
+
+    // If embedded, return content without Scaffold
+    if (widget.embedded) {
+      return content;
+    }
+    // Standalone with Scaffold
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -41,18 +57,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: reportProvider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : reportProvider.reports.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: reportProvider.reports.length,
-                  itemBuilder: (context, index) {
-                    final report = reportProvider.reports[index];
-                    return _buildReportCard(report);
-                  },
-                ),
+      body: content,
     );
   }
 
@@ -188,13 +193,13 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
               ),
               const Spacer(),
               if (report.response.isNotEmpty) ...[
-                Icon(
+                const Icon(
                   Icons.message,
                   size: 12,
                   color: AppConstants.primaryColor,
                 ),
                 const SizedBox(width: 4),
-                Text(
+                const Text(
                   'Reviewed',
                   style: TextStyle(
                     fontSize: 10,
@@ -218,7 +223,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.reply,
                     size: 14,
                     color: AppConstants.primaryColor,

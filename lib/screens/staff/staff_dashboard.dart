@@ -16,19 +16,44 @@ class StaffDashboard extends StatefulWidget {
 
 class _StaffDashboardState extends State<StaffDashboard> {
   int _currentIndex = 0;
+
   final List<Widget> _screens = [
     const _StaffHomeScreen(),
-    const _StaffReportsScreen(),
+    const _StaffReportsScreen(embedded: true), // no Scaffold/AppBar
   ];
+
+  final List<String> _titles = [
+    'Staff Dashboard',
+    'Department Reports',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Start listening to reports for the staff's department
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.currentUser;
+      final departmentId = user?.departmentId;
+      if (departmentId != null) {
+        final reportProvider =
+            Provider.of<ReportProvider>(context, listen: false);
+        reportProvider.listenToReports(departmentId);
+      }
+
+      final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+      adminProvider.loadDepartments();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          'Staff Dashboard',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        title: Text(
+          _titles[_currentIndex],
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
@@ -36,13 +61,14 @@ class _StaffDashboardState extends State<StaffDashboard> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, size: 20),
-            onPressed: () {
-              _showLogoutDialog(context);
-            },
+            onPressed: () => _showLogoutDialog(context),
           ),
         ],
       ),
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -76,7 +102,8 @@ class _StaffDashboardState extends State<StaffDashboard> {
               Provider.of<AuthProvider>(context, listen: false).logout();
               Navigator.pushReplacementNamed(context, '/');
             },
-            style: TextButton.styleFrom(foregroundColor: AppConstants.errorColor),
+            style:
+                TextButton.styleFrom(foregroundColor: AppConstants.errorColor),
             child: const Text('Logout', style: TextStyle(fontSize: 12)),
           ),
         ],
@@ -85,161 +112,187 @@ class _StaffDashboardState extends State<StaffDashboard> {
   }
 }
 
+// ==================== STAFF HOME SCREEN ====================
 class _StaffHomeScreen extends StatelessWidget {
   const _StaffHomeScreen();
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final reportProvider = Provider.of<ReportProvider>(context);
     final user = authProvider.currentUser;
-    
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppConstants.primaryColor,
-                  AppConstants.primaryLight,
+
+    final reports = reportProvider.reports;
+    final total = reports.length;
+    final pending =
+        reports.where((r) => r.status == AppConstants.statusPending).length;
+    final resolved =
+        reports.where((r) => r.status == AppConstants.statusResolved).length;
+
+    // Consumer to get department name from AdminProvider
+    return Consumer<AdminProvider>(
+      builder: (context, adminProvider, _) {
+        String departmentName = 'Unknown';
+        if (user?.departmentId != null) {
+          final dept = adminProvider.departments.firstWhere(
+            (d) => d.id == user!.departmentId,
+            orElse: () => DepartmentModel(
+              id: '',
+              code: '',
+              name: 'Loading...',
+              description: '',
+              createdAt: DateTime.now(),
+            ),
+          );
+          departmentName = dept.name;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ---------- Welcome Card ----------
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      AppConstants.primaryColor,
+                      AppConstants.primaryLight,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppConstants.primaryColor.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome, ${user?.displayName ?? 'Staff'}!',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Reg No: ${user?.regNo ?? '---'}',
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Department: $departmentName', // ✅ shows the name, not the ID
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ---------- Statistics ----------
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Received Reports',
+                      total.toString(),
+                      Icons.inbox,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Pending',
+                      pending.toString(),
+                      Icons.pending,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Resolved',
+                      resolved.toString(),
+                      Icons.check_circle,
+                      color: Colors.green,
+                    ),
+                  ),
                 ],
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: AppConstants.primaryColor.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome, ${user?.displayName ?? 'Staff'}!',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Reg No: ${user?.regNo ?? '---'}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white70,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Department: ${_getDepartmentName(user?.departmentId)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 20),
-          
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  'Received Reports',
-                  '0',
-                  Icons.inbox,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  'Pending',
-                  '0',
-                  Icons.pending,
-                  color: Colors.orange,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  'Resolved',
-                  '0',
-                  Icons.check_circle,
-                  color: Colors.green,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 20),
-          
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 20,
-                      color: AppConstants.primaryColor,
+
+              const SizedBox(height: 20),
+
+              // ---------- Instructions ----------
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    const SizedBox(width: 8),
+                  ],
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 20,
+                          color: AppConstants.primaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Instructions',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppConstants.primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     Text(
-                      'Instructions',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppConstants.primaryColor,
+                      '• View reports sent to your department\n'
+                      '• Tap a report to view full details\n'
+                      '• Update status and add response',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey,
+                        height: 1.5,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '• View reports sent to your department\n'
-                  '• Tap a report to view full details\n'
-                  '• Update status and add response',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  String _getDepartmentName(String? departmentId) {
-    return departmentId ?? 'Unknown';
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon, {Color color = AppConstants.primaryColor}) {
+  // ---------- Helper: Stat Card ----------
+  Widget _buildStatCard(String title, String value, IconData icon,
+      {Color color = AppConstants.primaryColor}) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -279,8 +332,10 @@ class _StaffHomeScreen extends StatelessWidget {
   }
 }
 
+// ==================== STAFF REPORTS SCREEN (embedded) ====================
 class _StaffReportsScreen extends StatefulWidget {
-  const _StaffReportsScreen();
+  final bool embedded;
+  const _StaffReportsScreen({this.embedded = false});
 
   @override
   State<_StaffReportsScreen> createState() => _StaffReportsScreenState();
@@ -290,20 +345,35 @@ class _StaffReportsScreenState extends State<_StaffReportsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final reportProvider = Provider.of<ReportProvider>(context, listen: false);
-      final departmentId = SessionManager.getDepartmentId();
-      if (departmentId != null) {
-        reportProvider.listenToReports(departmentId);
-      }
-    });
+    // The dashboard already starts the stream; we just rely on the provider.
+    // If standalone, we could start listening here, but for now we assume embedded.
   }
 
   @override
   Widget build(BuildContext context) {
     final reportProvider = Provider.of<ReportProvider>(context);
-    
+    final reports = reportProvider.reports;
+
+    // Build content (no Scaffold/AppBar)
+    Widget content = reportProvider.isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : reports.isEmpty
+            ? _buildEmptyState()
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: reports.length,
+                itemBuilder: (context, index) {
+                  final report = reports[index];
+                  return _buildReportCard(context, report);
+                },
+              );
+
+    // If embedded, return content without Scaffold
+    if (widget.embedded) {
+      return content;
+    }
+
+    // Standalone version (if needed)
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -315,18 +385,7 @@ class _StaffReportsScreenState extends State<_StaffReportsScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: reportProvider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : reportProvider.reports.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: reportProvider.reports.length,
-                  itemBuilder: (context, index) {
-                    final report = reportProvider.reports[index];
-                    return _buildReportCard(context, report);
-                  },
-                ),
+      body: content,
     );
   }
 
@@ -383,9 +442,11 @@ class _StaffReportsScreenState extends State<_StaffReportsScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Utils.getCategoryColor(report.category).withOpacity(0.15),
+                  color:
+                      Utils.getCategoryColor(report.category).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -410,7 +471,8 @@ class _StaffReportsScreenState extends State<_StaffReportsScreen> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Utils.getStatusColor(report.status).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -502,30 +564,41 @@ class _StaffReportsScreenState extends State<_StaffReportsScreen> {
 
   String _getCategoryLabel(String category) {
     switch (category) {
-      case 'academic': return 'Academic';
-      case 'health': return 'Health';
-      case 'security': return 'Security';
-      case 'harassment': return 'Harassment';
-      default: return 'Other';
+      case 'academic':
+        return 'Academic';
+      case 'health':
+        return 'Health';
+      case 'security':
+        return 'Security';
+      case 'harassment':
+        return 'Harassment';
+      default:
+        return 'Other';
     }
   }
 
   String _getStatusLabel(String status) {
     switch (status) {
-      case 'pending': return 'Pending';
-      case 'in-progress': return 'In Progress';
-      case 'resolved': return 'Resolved';
-      default: return 'Unknown';
+      case 'pending':
+        return 'Pending';
+      case 'in-progress':
+        return 'In Progress';
+      case 'resolved':
+        return 'Resolved';
+      default:
+        return 'Unknown';
     }
   }
 }
 
+// ==================== BOTTOM SHEET (unchanged) ====================
 class _ReportDetailsBottomSheet extends StatefulWidget {
   final ReportModel report;
   const _ReportDetailsBottomSheet({required this.report});
 
   @override
-  State<_ReportDetailsBottomSheet> createState() => _ReportDetailsBottomSheetState();
+  State<_ReportDetailsBottomSheet> createState() =>
+      _ReportDetailsBottomSheetState();
 }
 
 class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
@@ -560,7 +633,6 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            
             Text(
               widget.report.title,
               style: const TextStyle(
@@ -569,13 +641,14 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Utils.getCategoryColor(widget.report.category).withOpacity(0.15),
+                    color: Utils.getCategoryColor(widget.report.category)
+                        .withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -588,9 +661,11 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Utils.getStatusColor(widget.report.status).withOpacity(0.15),
+                    color: Utils.getStatusColor(widget.report.status)
+                        .withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -612,7 +687,6 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
               ],
             ),
             const SizedBox(height: 12),
-            
             Text(
               'Description:',
               style: TextStyle(
@@ -626,7 +700,6 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
               widget.report.description,
               style: const TextStyle(fontSize: 12),
             ),
-            
             if (widget.report.attachmentUrl != null) ...[
               const SizedBox(height: 8),
               GestureDetector(
@@ -645,11 +718,9 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
                 ),
               ),
             ],
-            
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
-            
             Text(
               'Your Response:',
               style: TextStyle(
@@ -673,7 +744,6 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            
             DropdownButtonFormField<String>(
               value: _selectedStatus,
               style: const TextStyle(fontSize: 12),
@@ -690,7 +760,8 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
               ),
               items: const [
                 DropdownMenuItem(value: 'pending', child: Text('Pending')),
-                DropdownMenuItem(value: 'in-progress', child: Text('In Progress')),
+                DropdownMenuItem(
+                    value: 'in-progress', child: Text('In Progress')),
                 DropdownMenuItem(value: 'resolved', child: Text('Resolved')),
               ],
               onChanged: (value) {
@@ -700,7 +771,6 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
               },
             ),
             const SizedBox(height: 16),
-            
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -719,7 +789,8 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     : const Text(
@@ -743,15 +814,14 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
     setState(() {
       _isUpdating = true;
     });
-    
     try {
-      final reportProvider = Provider.of<ReportProvider>(context, listen: false);
+      final reportProvider =
+          Provider.of<ReportProvider>(context, listen: false);
       bool success = await reportProvider.updateReportStatus(
         widget.report.id,
         _selectedStatus,
         _responseController.text.trim(),
       );
-      
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -784,20 +854,29 @@ class _ReportDetailsBottomSheetState extends State<_ReportDetailsBottomSheet> {
 
   String _getCategoryLabel(String category) {
     switch (category) {
-      case 'academic': return 'Academic';
-      case 'health': return 'Health';
-      case 'security': return 'Security';
-      case 'harassment': return 'Harassment';
-      default: return 'Other';
+      case 'academic':
+        return 'Academic';
+      case 'health':
+        return 'Health';
+      case 'security':
+        return 'Security';
+      case 'harassment':
+        return 'Harassment';
+      default:
+        return 'Other';
     }
   }
 
   String _getStatusLabel(String status) {
     switch (status) {
-      case 'pending': return 'Pending';
-      case 'in-progress': return 'In Progress';
-      case 'resolved': return 'Resolved';
-      default: return 'Unknown';
+      case 'pending':
+        return 'Pending';
+      case 'in-progress':
+        return 'In Progress';
+      case 'resolved':
+        return 'Resolved';
+      default:
+        return 'Unknown';
     }
   }
 }

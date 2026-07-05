@@ -6,10 +6,12 @@ import '../../constants.dart';
 import '../../models.dart';
 
 class ManageDepartmentsScreen extends StatefulWidget {
-  const ManageDepartmentsScreen({super.key});
+  final bool embedded;
+  const ManageDepartmentsScreen({super.key, this.embedded = false});
 
   @override
-  State<ManageDepartmentsScreen> createState() => _ManageDepartmentsScreenState();
+  State<ManageDepartmentsScreen> createState() =>
+      _ManageDepartmentsScreenState();
 }
 
 class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
@@ -30,6 +32,24 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   @override
   Widget build(BuildContext context) {
     final adminProvider = Provider.of<AdminProvider>(context);
+    // Build the content (body) without Scaffold
+    Widget content = adminProvider.isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : adminProvider.departments.isEmpty
+            ? _buildEmptyState()
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: adminProvider.departments.length,
+                itemBuilder: (context, index) {
+                  final dept = adminProvider.departments[index];
+                  return _buildDepartmentCard(dept);
+                },
+              );
+
+    // If embedded, return only the content (no AppBar/Scaffold)
+    if (widget.embedded) {
+      return content;
+    }
     
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -109,8 +129,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
             offset: const Offset(0, 2),
           ),
         ],
-        border: dept.isActive 
-            ? null 
+        border: dept.isActive
+            ? null
             : Border.all(color: Colors.red.withOpacity(0.3)),
       ),
       child: Row(
@@ -119,8 +139,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: dept.isActive 
-                  ? AppConstants.primaryColor.withOpacity(0.1) 
+              color: dept.isActive
+                  ? AppConstants.primaryColor.withOpacity(0.1)
                   : Colors.grey.withOpacity(0.2),
               borderRadius: BorderRadius.circular(10),
             ),
@@ -130,8 +150,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: dept.isActive 
-                      ? AppConstants.primaryColor 
+                  color: dept.isActive
+                      ? AppConstants.primaryColor
                       : Colors.grey[600],
                 ),
               ),
@@ -162,7 +182,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                 if (!dept.isActive)
                   Container(
                     margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
@@ -220,7 +241,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
     _nameController.clear();
     _descriptionController.clear();
     _editingId = null;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -242,7 +263,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                   hintText: 'e.g., BIT',
                   hintStyle: TextStyle(fontSize: 12),
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
               const SizedBox(height: 12),
@@ -255,7 +277,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                   hintText: 'e.g., Information Technology',
                   hintStyle: TextStyle(fontSize: 12),
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
               const SizedBox(height: 12),
@@ -269,7 +292,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                   hintText: 'Brief description of the department',
                   hintStyle: TextStyle(fontSize: 12),
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
             ],
@@ -307,7 +331,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
     _nameController.text = dept.name;
     _descriptionController.text = dept.description;
     _editingId = dept.id;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -327,7 +351,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                   labelText: 'Code',
                   labelStyle: TextStyle(fontSize: 12),
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
               const SizedBox(height: 12),
@@ -338,7 +363,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                   labelText: 'Department Name',
                   labelStyle: TextStyle(fontSize: 12),
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
               const SizedBox(height: 12),
@@ -350,7 +376,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                   labelText: 'Description',
                   labelStyle: TextStyle(fontSize: 12),
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
             ],
@@ -385,19 +412,15 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
 
   void _toggleDepartmentStatus(DepartmentModel dept) async {
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-    bool success = await adminProvider.toggleDepartmentStatus(
-      dept.id, 
-      !dept.isActive
-    );
-    
+    bool success =
+        await adminProvider.toggleDepartmentStatus(dept.id, !dept.isActive);
+
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            dept.isActive 
-                ? 'Department deactivated successfully!' 
-                : 'Department activated successfully!'
-          ),
+          content: Text(dept.isActive
+              ? 'Department deactivated successfully!'
+              : 'Department activated successfully!'),
           backgroundColor: AppConstants.successColor,
         ),
       );
@@ -422,9 +445,10 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+              final adminProvider =
+                  Provider.of<AdminProvider>(context, listen: false);
               bool success = await adminProvider.deleteDepartment(dept.id);
-              
+
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -455,13 +479,13 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
       );
       return;
     }
-    
+
     setState(() {
       _isAdding = true;
     });
-    
+
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-    
+
     final department = DepartmentModel(
       id: '',
       code: _codeController.text.trim().toUpperCase(),
@@ -469,13 +493,13 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
       description: _descriptionController.text.trim(),
       createdAt: DateTime.now(),
     );
-    
+
     bool success = await adminProvider.registerDepartment(department);
-    
+
     setState(() {
       _isAdding = false;
     });
-    
+
     if (success) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -496,7 +520,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
 
   Future<void> _updateDepartment() async {
     if (_editingId == null) return;
-    
+
     if (_codeController.text.isEmpty || _nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -506,25 +530,25 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
       );
       return;
     }
-    
+
     setState(() {
       _isAdding = true;
     });
-    
+
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-    
+
     Map<String, dynamic> data = {
       'code': _codeController.text.trim().toUpperCase(),
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
     };
-    
+
     bool success = await adminProvider.updateDepartment(_editingId!, data);
-    
+
     setState(() {
       _isAdding = false;
     });
-    
+
     if (success) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(

@@ -24,10 +24,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   final List<Widget> _screens = [
     const _AdminHomeScreen(),
-    const ManageDepartmentsScreen(),
-    const ManageCoursesScreen(),
-    const ViewAllReportsScreen(),
-    const ManageUsersScreen(), // Changed from MorePage to ManageUsers
+    const ManageDepartmentsScreen(embedded: true),
+    const ManageCoursesScreen(embedded: true),
+    const ViewAllReportsScreen(embedded: true),
+    const ManageUsersScreen(embedded: true),
   ];
 
   @override
@@ -51,7 +51,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
-          'Dashboard',
+          'Admin Dashboard',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -166,7 +166,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           BottomNavItem(icon: Icons.business_outlined, label: 'Depts'),
           BottomNavItem(icon: Icons.book_outlined, label: 'Courses'),
           BottomNavItem(icon: Icons.report_outlined, label: 'Reports'),
-          BottomNavItem(icon: Icons.people_outline, label: 'Users'), // Changed from More to Users
+          BottomNavItem(
+              icon: Icons.people_outline,
+              label: 'Users'), // Changed from More to Users
         ],
       ),
     );
@@ -484,7 +486,8 @@ class _AdminHomeScreen extends StatelessWidget {
             GestureDetector(
               onTap: () {
                 // Navigate to Users tab
-                final parent = context.findAncestorStateOfType<_AdminDashboardState>();
+                final parent =
+                    context.findAncestorStateOfType<_AdminDashboardState>();
                 if (parent != null) {
                   parent.setState(() {
                     parent._currentIndex = 4; // Users tab index
@@ -548,7 +551,8 @@ class _AdminHomeScreen extends StatelessWidget {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              _buildUserChip('Students', totalStudents, Colors.white),
+                              _buildUserChip(
+                                  'Students', totalStudents, Colors.white),
                               const SizedBox(width: 8),
                               _buildUserChip('Staff', totalStaff, Colors.white),
                             ],
@@ -664,7 +668,8 @@ class _AdminHomeScreen extends StatelessWidget {
             // ==================== PENDING REPORTS CARD ====================
             GestureDetector(
               onTap: () {
-                final parent = context.findAncestorStateOfType<_AdminDashboardState>();
+                final parent =
+                    context.findAncestorStateOfType<_AdminDashboardState>();
                 if (parent != null) {
                   parent.setState(() {
                     parent._currentIndex = 3; // Reports tab
@@ -818,7 +823,8 @@ class _AdminHomeScreen extends StatelessWidget {
   }
 
   // ==================== Helper Methods ====================
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+  Widget _buildStatItem(
+      String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -858,7 +864,8 @@ class _AdminHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickStat(String label, String value, IconData icon, Color color) {
+  Widget _buildQuickStat(
+      String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -1044,7 +1051,20 @@ class _AdminHomeScreen extends StatelessWidget {
   String _getTodayDate() {
     final now = DateTime.now();
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]}';
   }
 

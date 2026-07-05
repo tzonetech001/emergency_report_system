@@ -8,7 +8,8 @@ import '../../models.dart';
 import '../../utils.dart';
 
 class ManageUsersScreen extends StatefulWidget {
-  const ManageUsersScreen({super.key});
+  final bool embedded;
+  const ManageUsersScreen({super.key, this.embedded = false});
 
   @override
   State<ManageUsersScreen> createState() => _ManageUsersScreenState();
@@ -21,7 +22,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this); // 3 tabs
+    _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final adminProvider = Provider.of<AdminProvider>(context, listen: false);
       _loadAllData(adminProvider);
@@ -34,7 +35,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
       adminProvider.loadAllCourses(),
       adminProvider.loadStudents(),
       adminProvider.loadStaff(),
-      adminProvider.loadAdmins(), // we'll add this method
+      adminProvider.loadAdmins(),
     ]);
   }
 
@@ -49,8 +50,41 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
     final adminProvider = Provider.of<AdminProvider>(context);
     final students = adminProvider.students;
     final staff = adminProvider.staff;
-    final admins = adminProvider.admins; // we'll add this getter
+    final admins = adminProvider.admins;
 
+    // Build the content (the TabBar and TabBarView) without Scaffold
+    Widget content = Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Students'),
+            Tab(text: 'Staff'),
+            Tab(text: 'Admins'),
+          ],
+          labelColor: AppConstants.primaryColor,
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: AppConstants.primaryColor,
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildUserList(students, 'student'),
+              _buildUserList(staff, 'staff'),
+              _buildUserList(admins, 'admin'),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    // If embedded, return only the content
+    if (widget.embedded) {
+      return content;
+    }
+
+    // Otherwise, wrap with Scaffold and AppBar
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -61,17 +95,6 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Students'),
-            Tab(text: 'Staff'),
-            Tab(text: 'Admins'),
-          ],
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add, size: 24),
@@ -102,14 +125,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildUserList(students, 'student'),
-          _buildUserList(staff, 'staff'),
-          _buildUserList(admins, 'admin'),
-        ],
-      ),
+      body: content,
     );
   }
 
@@ -786,24 +802,34 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                 );
                 return;
               }
-              // Generate regNo for admin: NIT/ADMIN/YYYY/XXXX
-              // We'll get a sequence from a counter or generate manually.
-              // For simplicity, we'll create a unique regNo using timestamp.
-              // In production, you should use a proper counter.
-              final timestamp = DateTime.now().millisecondsSinceEpoch;
-              String regNo = 'NIT/ADMIN/${DateTime.now().year}/$timestamp'
-                  .substring(0, 18);
-
-              // Create a user map and save via adminProvider.registerAdmin (we'll add)
-              // Since we don't have registerAdmin in provider yet, we'll use a workaround:
-              // We can create a user document with role 'admin' and also create Firebase Auth user.
-              // We'll add a method in AdminProvider.
-              // For now, we'll just show a message.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text(
-                        'Admin registration not implemented yet. Add method in AdminProvider.')),
-              );
+              // We'll use the registerAdmin method from provider
+              final provider =
+                  Provider.of<AdminProvider>(context, listen: false);
+              final adminData = {
+                'firstName': firstNameCtrl.text.trim(),
+                'middleName': middleNameCtrl.text.trim(),
+                'lastName': lastNameCtrl.text.trim(),
+                'email': emailCtrl.text.trim(),
+                'phone': phoneCtrl.text.trim(),
+                'password': passwordCtrl.text.trim(),
+              };
+              String? regNo = await provider.registerAdmin(adminData);
+              if (regNo != null) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Admin registered! RegNo: $regNo'),
+                    backgroundColor: AppConstants.successColor,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(provider.error ?? 'Registration failed'),
+                    backgroundColor: AppConstants.errorColor,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppConstants.primaryColor),

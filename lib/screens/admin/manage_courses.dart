@@ -6,7 +6,8 @@ import '../../constants.dart';
 import '../../models.dart';
 
 class ManageCoursesScreen extends StatefulWidget {
-  const ManageCoursesScreen({super.key});
+  final bool embedded;
+  const ManageCoursesScreen({super.key, this.embedded = false});
 
   @override
   State<ManageCoursesScreen> createState() => _ManageCoursesScreenState();
@@ -33,7 +34,24 @@ class _ManageCoursesScreenState extends State<ManageCoursesScreen> {
   @override
   Widget build(BuildContext context) {
     final adminProvider = Provider.of<AdminProvider>(context);
+    // Build the content (body) without Scaffold
+    Widget content = adminProvider.isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : adminProvider.allCourses.isEmpty
+            ? _buildEmptyState()
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: adminProvider.allCourses.length,
+                itemBuilder: (context, index) {
+                  final course = adminProvider.allCourses[index];
+                  return _buildCourseCard(course);
+                },
+              );
 
+    // If embedded, return only the content (no AppBar/Scaffold)
+    if (widget.embedded) {
+      return content;
+    }
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(

@@ -21,6 +21,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'NIT Emergency Report',
       theme: ThemeData(
         fontFamily: GoogleFonts.poppins().fontFamily,

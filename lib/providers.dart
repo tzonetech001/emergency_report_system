@@ -9,6 +9,8 @@ import 'repositories.dart';
 import 'utils.dart';
 import 'constants.dart'; // Added missing import for AppConstants
 
+// lib/providers.dart (only AuthProvider part – replace the entire AuthProvider class)
+
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _repository = AuthRepository();
 
@@ -39,7 +41,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = _getUserFriendlyError(e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -53,8 +55,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> resetPassword(
-      String email, String phone, String newPassword) async {
+  Future<bool> resetPassword(String email, String phone, String newPassword) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -65,11 +66,46 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = _getUserFriendlyError(e);
       _isLoading = false;
       notifyListeners();
       return false;
     }
+  }
+
+  // Helper: convert exceptions to user-friendly messages
+  String _getUserFriendlyError(Object e) {
+    if (e is FirebaseAuthException) {
+      // Handle Firebase Auth specific errors
+      switch (e.code) {
+        case 'network-request-failed':
+          return 'Network error. Please check your internet connection.';
+        case 'user-not-found':
+          return 'No user found with these credentials.';
+        case 'wrong-password':
+          return 'Incorrect password. Please try again.';
+        case 'invalid-email':
+          return 'Invalid email address.';
+        case 'too-many-requests':
+          return 'Too many attempts. Please try again later.';
+        default:
+          return e.message ?? 'An error occurred. Please try again.';
+      }
+    } else if (e is FirebaseException) {
+      // General Firebase exceptions (including Firestore)
+      if (e.code == 'network-request-failed') {
+        return 'Network error. Please check your internet connection.';
+      }
+      return e.message ?? 'An error occurred. Please try again.';
+    } else if (e is Exception) {
+      // Any other exception
+      final msg = e.toString();
+      if (msg.contains('network') || msg.contains('Connection') || msg.contains('timeout')) {
+        return 'Network error. Please check your internet connection.';
+      }
+      return 'An error occurred. Please try again.';
+    }
+    return 'An unexpected error occurred.';
   }
 }
 

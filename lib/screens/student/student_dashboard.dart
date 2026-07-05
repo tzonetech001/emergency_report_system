@@ -16,20 +16,40 @@ class StudentDashboard extends StatefulWidget {
 
 class _StudentDashboardState extends State<StudentDashboard> {
   int _currentIndex = 0;
+
   final List<Widget> _screens = [
     const _StudentHomeScreen(),
-    const ReportAcademicScreen(),
-    const MyReportsScreen(),
+    const ReportAcademicScreen(embedded: true),
+    const MyReportsScreen(embedded: true),
   ];
+
+  final List<String> _titles = [
+    'Home',
+    'Report Issue',
+    'My Reports',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.currentUser?.id;
+      if (userId != null) {
+        final reportProvider = Provider.of<ReportProvider>(context, listen: false);
+        reportProvider.listenToUserReports(userId);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          'Home',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        title: Text(
+          _titles[_currentIndex],
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppConstants.primaryColor,
         foregroundColor: Colors.white,
@@ -37,13 +57,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, size: 20),
-            onPressed: () {
-              _showLogoutDialog(context);
-            },
+            onPressed: () => _showLogoutDialog(context),
           ),
         ],
       ),
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -87,14 +108,21 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 }
 
+// ==================== STUDENT HOME SCREEN ====================
 class _StudentHomeScreen extends StatelessWidget {
   const _StudentHomeScreen();
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final reportProvider = Provider.of<ReportProvider>(context);
     final user = authProvider.currentUser;
-    
+
+    final reports = reportProvider.reports;
+    final total = reports.length;
+    final pending = reports.where((r) => r.status == AppConstants.statusPending).length;
+    final resolved = reports.where((r) => r.status == AppConstants.statusResolved).length;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -104,11 +132,8 @@ class _StudentHomeScreen extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppConstants.primaryColor,
-                  AppConstants.primaryLight,
-                ],
+              gradient: const LinearGradient(
+                colors: [AppConstants.primaryColor, AppConstants.primaryLight],
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
@@ -133,63 +158,40 @@ class _StudentHomeScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Reg No: ${user?.regNo ?? '---'}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white70,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.white70),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Course: BIT',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white70,
-                  ),
+                  'Course: ${user?.courseId ?? 'N/A'}',
+                  style: const TextStyle(fontSize: 12, color: Colors.white70),
                 ),
               ],
             ),
           ),
-          
           const SizedBox(height: 20),
-          
+
           Row(
             children: [
               Expanded(
-                child: _buildStatCard(
-                  'Total Reports',
-                  '0',
-                  Icons.report,
-                ),
+                child: _buildStatCard('Total Reports', total.toString(), Icons.report),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildStatCard(
-                  'Pending',
-                  '0',
-                  Icons.pending,
-                  color: Colors.orange,
-                ),
+                child: _buildStatCard('Pending', pending.toString(), Icons.pending,
+                    color: Colors.orange),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildStatCard(
-                  'Resolved',
-                  '0',
-                  Icons.check_circle,
-                  color: Colors.green,
-                ),
+                child: _buildStatCard('Resolved', resolved.toString(), Icons.check_circle,
+                    color: Colors.green),
               ),
             ],
           ),
-          
           const SizedBox(height: 20),
-          
+
           const Text(
             'Quick Actions',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Row(
@@ -198,14 +200,7 @@ class _StudentHomeScreen extends StatelessWidget {
                 child: _buildQuickActionCard(
                   'Report Issue',
                   Icons.add_alert,
-                  () {
-                    final parent = context.findAncestorStateOfType<_StudentDashboardState>();
-                    if (parent != null) {
-                      parent.setState(() {
-                        parent._currentIndex = 1;
-                      });
-                    }
-                  },
+                  () => _switchTab(context, 1),
                 ),
               ),
               const SizedBox(width: 12),
@@ -213,14 +208,7 @@ class _StudentHomeScreen extends StatelessWidget {
                 child: _buildQuickActionCard(
                   'View Reports',
                   Icons.history,
-                  () {
-                    final parent = context.findAncestorStateOfType<_StudentDashboardState>();
-                    if (parent != null) {
-                      parent.setState(() {
-                        parent._currentIndex = 2;
-                      });
-                    }
-                  },
+                  () => _switchTab(context, 2),
                 ),
               ),
             ],
@@ -230,7 +218,8 @@ class _StudentHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, {Color color = AppConstants.primaryColor}) {
+  Widget _buildStatCard(String title, String value, IconData icon,
+      {Color color = AppConstants.primaryColor}) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -258,10 +247,7 @@ class _StudentHomeScreen extends StatelessWidget {
           ),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.grey,
-            ),
+            style: const TextStyle(fontSize: 10, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
         ],
@@ -292,15 +278,21 @@ class _StudentHomeScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _switchTab(BuildContext context, int index) {
+    final parent = context.findAncestorStateOfType<_StudentDashboardState>();
+    if (parent != null) {
+      parent.setState(() {
+        parent._currentIndex = index;
+      });
+    }
   }
 }

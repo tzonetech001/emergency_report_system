@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1062911897505",
+    "firebase_url": "https://emergence-report-app-default-rtdb.firebaseio.com",
+    "project_id": "emergence-report-app",
+    "storage_bucket": "emergence-report-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1062911897505:android:cc717b0be9c7ffcd7125e0",
+        "android_client_info": {
+          "package_name": "com.example.emergency_report_system"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDiBwRbt5dgUB6AWOHOab5MBUxohAZLBFs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -24,10 +24,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   final List<Widget> _screens = [
     const _AdminHomeScreen(),
-    const ManageDepartmentsScreen(embedded: true),
-    const ManageCoursesScreen(embedded: true),
-    const ViewAllReportsScreen(embedded: true),
-    const ManageUsersScreen(embedded: true),
+    const ManageDepartmentsScreen(),
+    const ManageCoursesScreen(),
+    const ViewAllReportsScreen(),
+    const ManageUsersScreen(),
   ];
 
   @override
@@ -45,115 +45,177 @@ class _AdminDashboardState extends State<AdminDashboard> {
     });
   }
 
+  void _showActionsMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Profile'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfilePage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications_outlined),
+              title: const Text('Notifications'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.refresh),
+              title: const Text('Refresh Data'),
+              onTap: () {
+                Navigator.pop(context);
+                _refreshData(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _showLogoutDialog(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text(
-          'Admin Dashboard',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: Consumer<AuthProvider>(
-          builder: (context, authProvider, _) {
-            final user = authProvider.currentUser;
-            final initial = user?.firstName.isNotEmpty == true
-                ? user!.firstName[0].toUpperCase()
-                : 'A';
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProfilePage(),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.4),
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      initial,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        actions: [
-          // Bell Icon for Notifications
-          IconButton(
-            icon: Stack(
-              children: [
-                const Icon(
-                  Icons.notifications_outlined,
-                  size: 28,
-                  color: Colors.white,
-                ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationsScreen(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-          // Refresh button
-          IconButton(
-            icon: const Icon(
-              Icons.refresh,
-              size: 24,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              _refreshData(context);
-            },
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
+      // appBar: AppBar(
+      //   title: const Text(
+      //     'Admin Dashboard',
+      //     style: TextStyle(
+      //       fontSize: 18,
+      //       fontWeight: FontWeight.bold,
+      //       color: Colors.white,
+      //     ),
+      //   ),
+      //   backgroundColor: AppConstants.primaryColor,
+      //   foregroundColor: Colors.white,
+      //   elevation: 0,
+      //   centerTitle: true,
+      //   leading: Consumer<AuthProvider>(
+      //     builder: (context, authProvider, _) {
+      //       final user = authProvider.currentUser;
+      //       final initial = user?.firstName.isNotEmpty == true
+      //           ? user!.firstName[0].toUpperCase()
+      //           : 'A';
+      //       return Padding(
+      //         padding: const EdgeInsets.all(8.0),
+      //         child: GestureDetector(
+      //           onTap: () {
+      //             Navigator.push(
+      //               context,
+      //               MaterialPageRoute(
+      //                 builder: (context) => const ProfilePage(),
+      //               ),
+      //             );
+      //           },
+      //           child: Container(
+      //             width: 40,
+      //             height: 40,
+      //             decoration: BoxDecoration(
+      //               color: Colors.white.withOpacity(0.2),
+      //               shape: BoxShape.circle,
+      //               border: Border.all(
+      //                 color: Colors.white.withOpacity(0.4),
+      //                 width: 2,
+      //               ),
+      //             ),
+      //             child: Center(
+      //               child: Text(
+      //                 initial,
+      //                 style: const TextStyle(
+      //                   color: Colors.white,
+      //                   fontSize: 16,
+      //                   fontWeight: FontWeight.bold,
+      //                 ),
+      //               ),
+      //             ),
+      //           ),
+      //         ),
+      //       );
+      //     },
+      //   ),
+      //   actions: [
+      //     // Bell Icon for Notifications
+      //     IconButton(
+      //       icon: Stack(
+      //         children: [
+      //           const Icon(
+      //             Icons.notifications_outlined,
+      //             size: 28,
+      //             color: Colors.white,
+      //           ),
+      //           Positioned(
+      //             right: 0,
+      //             top: 0,
+      //             child: Container(
+      //               width: 10,
+      //               height: 10,
+      //               decoration: const BoxDecoration(
+      //                 color: Colors.red,
+      //                 shape: BoxShape.circle,
+      //               ),
+      //             ),
+      //           ),
+      //         ],
+      //       ),
+      //       onPressed: () {
+      //         Navigator.push(
+      //           context,
+      //           MaterialPageRoute(
+      //             builder: (context) => const NotificationsScreen(),
+      //           ),
+      //         );
+      //       },
+      //     ),
+      //     const SizedBox(width: 8),
+      //     // Refresh button
+      //     IconButton(
+      //       icon: const Icon(
+      //         Icons.refresh,
+      //         size: 24,
+      //         color: Colors.white,
+      //       ),
+      //       onPressed: () {
+      //         _refreshData(context);
+      //       },
+      //     ),
+      //     const SizedBox(width: 4),
+      //   ],
+      // ),
       body: _screens[_currentIndex],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _showActionsMenu(context);
+        },
+        backgroundColor: AppConstants.primaryColor,
+        child: const Icon(Icons.more_vert, color: Colors.white),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onTap: (index) {

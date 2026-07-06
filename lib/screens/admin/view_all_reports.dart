@@ -7,8 +7,7 @@ import '../../models.dart';
 import '../../utils.dart';
 
 class ViewAllReportsScreen extends StatefulWidget {
-  final bool embedded;
-  const ViewAllReportsScreen({super.key, this.embedded = false});
+  const ViewAllReportsScreen({super.key});
 
   @override
   State<ViewAllReportsScreen> createState() => _ViewAllReportsScreenState();
@@ -43,15 +42,13 @@ class _ViewAllReportsScreenState extends State<ViewAllReportsScreen> {
                 },
               );
 
-    // If embedded, return only the content
-    if (widget.embedded) {
-      return content;
-    }
+
 
     // Otherwise, wrap with Scaffold and AppBar
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        automaticallyImplyLeading: false, 
         title: const Text(
           'All Reports',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),

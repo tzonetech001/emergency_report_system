@@ -8,8 +8,7 @@ import '../../models.dart';
 import '../../utils.dart';
 
 class ManageUsersScreen extends StatefulWidget {
-  final bool embedded;
-  const ManageUsersScreen({super.key, this.embedded = false});
+  const ManageUsersScreen({super.key});
 
   @override
   State<ManageUsersScreen> createState() => _ManageUsersScreenState();
@@ -80,14 +79,13 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
     );
 
     // If embedded, return only the content
-    if (widget.embedded) {
-      return content;
-    }
+
 
     // Otherwise, wrap with Scaffold and AppBar
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        automaticallyImplyLeading: false, 
         title: const Text(
           'Manage Users',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),

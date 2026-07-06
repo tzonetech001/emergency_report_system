@@ -51,7 +51,6 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
     final staff = adminProvider.staff;
     final admins = adminProvider.admins;
 
-    // Build the content (the TabBar and TabBarView) without Scaffold
     Widget content = Column(
       children: [
         TabBar(
@@ -78,14 +77,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
       ],
     );
 
-    // If embedded, return only the content
-
-
-    // Otherwise, wrap with Scaffold and AppBar
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        automaticallyImplyLeading: false, 
+        automaticallyImplyLeading: false,
         title: const Text(
           'Manage Users',
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
@@ -200,6 +195,37 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
     List<String> parts = regNoParts.split('/');
     String code = parts.length > 1 ? parts[1] : '';
 
+    // Get department name
+    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
+    final department = adminProvider.departments.firstWhere(
+      (d) => d.id == user.departmentId,
+      orElse: () => DepartmentModel(
+        id: '',
+        code: '',
+        name: 'Unknown',
+        description: '',
+        category: '',
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    // Get course name (for students)
+    String courseName = '';
+    if (user.role == AppConstants.roleStudent && user.courseId != null) {
+      final course = adminProvider.allCourses.firstWhere(
+        (c) => c.id == user.courseId,
+        orElse: () => CourseModel(
+          id: '',
+          code: '',
+          name: 'Unknown',
+          departmentId: '',
+          duration: 0,
+          createdAt: DateTime.now(),
+        ),
+      );
+      courseName = course.name;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -307,6 +333,23 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                     ),
                   ],
                 ),
+                Text(
+                  'Department: ${department.name}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: user.isActive ? Colors.grey[500] : Colors.grey[400],
+                  ),
+                ),
+                if (user.role == AppConstants.roleStudent &&
+                    courseName.isNotEmpty)
+                  Text(
+                    'Course: $courseName',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color:
+                          user.isActive ? Colors.grey[500] : Colors.grey[400],
+                    ),
+                  ),
                 if (!user.isActive)
                   Container(
                     margin: const EdgeInsets.only(top: 4),
@@ -368,57 +411,220 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
     final lastNameController = TextEditingController(text: user.lastName);
     final emailController = TextEditingController(text: user.email);
     final phoneController = TextEditingController(text: user.phone);
+    String? selectedDepartmentId = user.departmentId;
+    String? selectedCourseId = user.courseId;
+    bool _isLoading = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit User',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTextField(firstNameController, 'First Name'),
-              _buildTextField(middleNameController, 'Middle Name'),
-              _buildTextField(lastNameController, 'Last Name'),
-              _buildTextField(emailController, 'Email',
-                  keyboardType: TextInputType.emailAddress),
-              _buildTextField(phoneController, 'Phone Number',
-                  keyboardType: TextInputType.phone),
+      barrierDismissible: !_isLoading,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final adminProvider = Provider.of<AdminProvider>(context);
+
+          // For students: only show Education departments
+          // For staff: show all departments
+          // For admins: no department selection
+          List<DepartmentModel> departments = [];
+          if (user.role == AppConstants.roleStudent) {
+            departments = adminProvider.departments
+                .where((d) => d.isActive && d.category == 'Education')
+                .toList();
+          } else if (user.role == AppConstants.roleStaff) {
+            departments =
+                adminProvider.departments.where((d) => d.isActive).toList();
+          }
+
+          // Courses filtered by selected department (for students)
+          List<CourseModel> courses = [];
+          if (user.role == AppConstants.roleStudent &&
+              selectedDepartmentId != null) {
+            courses = adminProvider.allCourses
+                .where(
+                    (c) => c.departmentId == selectedDepartmentId && c.isActive)
+                .toList();
+          }
+
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              'Edit ${user.role.toUpperCase()}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTextField(firstNameController, 'First Name'),
+                  _buildTextField(middleNameController, 'Middle Name'),
+                  _buildTextField(lastNameController, 'Last Name'),
+                  _buildTextField(emailController, 'Email',
+                      keyboardType: TextInputType.emailAddress),
+                  _buildTextField(phoneController, 'Phone Number',
+                      keyboardType: TextInputType.phone),
+                  // Department dropdown (for students and staff)
+                  if (user.role != AppConstants.roleAdmin) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: selectedDepartmentId,
+                      style: const TextStyle(fontSize: 12, color: Colors.black),
+                      decoration: const InputDecoration(
+                        labelText: 'Department',
+                        labelStyle: TextStyle(fontSize: 12, color: Colors.black),
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      items: departments.map((d) {
+                        return DropdownMenuItem(
+                          value: d.id,
+                          child: Text(d.name,
+                              style: const TextStyle(fontSize: 12, color: Colors.black)),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedDepartmentId = value;
+                          selectedCourseId =
+                              null; // Reset course when department changes
+                        });
+                      },
+                    ),
+                  ],
+                  // Course dropdown (only for students)
+                  if (user.role == AppConstants.roleStudent) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: selectedCourseId,
+                      style: const TextStyle(fontSize: 12, color: Colors.black),
+                      decoration: const InputDecoration(
+                        labelText: 'Course',
+                        labelStyle: TextStyle(fontSize: 12, color: Colors.black),
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      items: courses.map((c) {
+                        return DropdownMenuItem(
+                          value: c.id,
+                          child: Text(c.name,
+                              style: const TextStyle(fontSize: 12, color: Colors.black)),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedCourseId = value;
+                        });
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: _isLoading ? null : () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        // Validate
+                        if (firstNameController.text.trim().isEmpty ||
+                            lastNameController.text.trim().isEmpty ||
+                            emailController.text.trim().isEmpty ||
+                            phoneController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please fill all fields'),
+                              backgroundColor: AppConstants.errorColor,
+                            ),
+                          );
+                          return;
+                        }
+                        if (user.role != AppConstants.roleAdmin &&
+                            selectedDepartmentId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please select a department'),
+                              backgroundColor: AppConstants.errorColor,
+                            ),
+                          );
+                          return;
+                        }
+                        if (user.role == AppConstants.roleStudent &&
+                            selectedCourseId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please select a course'),
+                              backgroundColor: AppConstants.errorColor,
+                            ),
+                          );
+                          return;
+                        }
+
+                        setState(() => _isLoading = true);
+
+                        final provider =
+                            Provider.of<AdminProvider>(context, listen: false);
+                        Map<String, dynamic> data = {
+                          'firstName': firstNameController.text.trim(),
+                          'middleName': middleNameController.text.trim(),
+                          'lastName': lastNameController.text.trim(),
+                          'email': emailController.text.trim(),
+                          'phone': phoneController.text.trim(),
+                        };
+
+                        if (user.role != AppConstants.roleAdmin &&
+                            selectedDepartmentId != null) {
+                          data['departmentId'] = selectedDepartmentId;
+                        }
+                        if (user.role == AppConstants.roleStudent &&
+                            selectedCourseId != null) {
+                          data['courseId'] = selectedCourseId;
+                        }
+
+                        bool success = await provider.updateUser(user.id, data);
+                        setState(() => _isLoading = false);
+
+                        if (success) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('User updated!'),
+                              backgroundColor: AppConstants.successColor,
+                            ),
+                          );
+                          await _loadAllData(provider);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(provider.error ?? 'Update failed'),
+                              backgroundColor: AppConstants.errorColor,
+                            ),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Update'),
+              ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              final provider =
-                  Provider.of<AdminProvider>(context, listen: false);
-              Map<String, dynamic> data = {
-                'firstName': firstNameController.text.trim(),
-                'middleName': middleNameController.text.trim(),
-                'lastName': lastNameController.text.trim(),
-                'email': emailController.text.trim(),
-                'phone': phoneController.text.trim(),
-              };
-              bool success = await provider.updateUser(user.id, data);
-              if (success) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('User updated!'),
-                      backgroundColor: AppConstants.successColor),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor),
-            child: const Text('Update'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -435,6 +641,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
           backgroundColor: AppConstants.successColor,
         ),
       );
+      await _loadAllData(provider);
     }
   }
 
@@ -461,6 +668,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       content: Text('User deleted!'),
                       backgroundColor: AppConstants.successColor),
                 );
+                await _loadAllData(provider);
               }
             },
             style: ElevatedButton.styleFrom(
@@ -482,14 +690,18 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
     String? selectedDepartmentId;
     String? selectedCourseId;
     String selectedYear = DateTime.now().year.toString();
+    bool _isLoading = false;
 
     showDialog(
       context: context,
+      barrierDismissible: !_isLoading,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           final adminProvider = Provider.of<AdminProvider>(context);
-          final departments =
-              adminProvider.departments.where((d) => d.isActive).toList();
+          // Only departments with category 'Education'
+          final departments = adminProvider.departments
+              .where((d) => d.isActive && d.category == 'Education')
+              .toList();
           final courses = adminProvider.allCourses
               .where(
                   (c) => c.departmentId == selectedDepartmentId && c.isActive)
@@ -511,10 +723,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       keyboardType: TextInputType.emailAddress),
                   _buildTextField(phoneCtrl, 'Phone Number',
                       keyboardType: TextInputType.phone),
-                  // Department dropdown
+                  // Department dropdown (Education only)
                   DropdownButtonFormField<String>(
-                    initialValue: selectedDepartmentId,
-                    style: const TextStyle(fontSize: 12),
+                    value: selectedDepartmentId,
+                    style: const TextStyle(fontSize: 12, color: Colors.black),
                     decoration: const InputDecoration(
                       labelText: 'Department',
                       labelStyle: TextStyle(fontSize: 12),
@@ -535,8 +747,8 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   const SizedBox(height: 12),
                   // Course dropdown
                   DropdownButtonFormField<String>(
-                    initialValue: selectedCourseId,
-                    style: const TextStyle(fontSize: 12),
+                    value: selectedCourseId,
+                    style: const TextStyle(fontSize: 12, color: Colors.black),
                     decoration: const InputDecoration(
                       labelText: 'Course',
                       labelStyle: TextStyle(fontSize: 12),
@@ -551,10 +763,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                         setState(() => selectedCourseId = value),
                   ),
                   const SizedBox(height: 12),
-                  // Year dropdown (2024-2030)
+                  // Year dropdown
                   DropdownButtonFormField<String>(
-                    initialValue: selectedYear,
-                    style: const TextStyle(fontSize: 12),
+                    value: selectedYear,
+                    style: const TextStyle(fontSize: 12, color: Colors.black),
                     decoration: const InputDecoration(
                       labelText: 'Year of Registration',
                       labelStyle: TextStyle(fontSize: 12),
@@ -574,52 +786,79 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
             ),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel')),
+                onPressed: _isLoading ? null : () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
               ElevatedButton(
-                onPressed: () async {
-                  if (firstNameCtrl.text.isEmpty ||
-                      lastNameCtrl.text.isEmpty ||
-                      emailCtrl.text.isEmpty ||
-                      phoneCtrl.text.isEmpty ||
-                      selectedDepartmentId == null ||
-                      selectedCourseId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Please fill all fields'),
-                          backgroundColor: AppConstants.errorColor),
-                    );
-                    return;
-                  }
-                  final provider =
-                      Provider.of<AdminProvider>(context, listen: false);
-                  // Get course code from selected course
-                  final course = provider.allCourses
-                      .firstWhere((c) => c.id == selectedCourseId);
-                  final student = StudentData(
-                    firstName: firstNameCtrl.text.trim(),
-                    middleName: middleNameCtrl.text.trim(),
-                    lastName: lastNameCtrl.text.trim(),
-                    email: emailCtrl.text.trim(),
-                    phone: phoneCtrl.text.trim(),
-                    departmentId: selectedDepartmentId!,
-                    courseId: selectedCourseId!,
-                    courseCode: course.code,
-                    year: int.parse(selectedYear),
-                  );
-                  String? regNo = await provider.registerStudent(student);
-                  if (regNo != null) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text('Student registered! RegNo: $regNo'),
-                          backgroundColor: AppConstants.successColor),
-                    );
-                  }
-                },
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (firstNameCtrl.text.isEmpty ||
+                            lastNameCtrl.text.isEmpty ||
+                            emailCtrl.text.isEmpty ||
+                            phoneCtrl.text.isEmpty ||
+                            selectedDepartmentId == null ||
+                            selectedCourseId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Please fill all fields'),
+                                backgroundColor: AppConstants.errorColor),
+                          );
+                          return;
+                        }
+
+                        setState(() => _isLoading = true);
+
+                        final provider =
+                            Provider.of<AdminProvider>(context, listen: false);
+                        final course = provider.allCourses
+                            .firstWhere((c) => c.id == selectedCourseId);
+                        final student = StudentData(
+                          firstName: firstNameCtrl.text.trim(),
+                          middleName: middleNameCtrl.text.trim(),
+                          lastName: lastNameCtrl.text.trim(),
+                          email: emailCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim(),
+                          departmentId: selectedDepartmentId!,
+                          courseId: selectedCourseId!,
+                          courseCode: course.code,
+                          year: int.parse(selectedYear),
+                        );
+                        String? regNo = await provider.registerStudent(student);
+                        setState(() => _isLoading = false);
+
+                        if (regNo != null) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content:
+                                    Text('Student registered! RegNo: $regNo'),
+                                backgroundColor: AppConstants.successColor),
+                          );
+                          await _loadAllData(provider);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text(provider.error ?? 'Registration failed'),
+                              backgroundColor: AppConstants.errorColor,
+                            ),
+                          );
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: AppConstants.primaryColor),
-                child: const Text('Register'),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Register'),
               ),
             ],
           );
@@ -637,12 +876,15 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
     final phoneCtrl = TextEditingController();
     String? selectedDepartmentId;
     String selectedYear = DateTime.now().year.toString();
+    bool _isLoading = false;
 
     showDialog(
       context: context,
+      barrierDismissible: !_isLoading,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           final adminProvider = Provider.of<AdminProvider>(context);
+          // All active departments
           final departments =
               adminProvider.departments.where((d) => d.isActive).toList();
 
@@ -662,9 +904,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       keyboardType: TextInputType.emailAddress),
                   _buildTextField(phoneCtrl, 'Phone Number',
                       keyboardType: TextInputType.phone),
+                  // Department dropdown (all departments)
                   DropdownButtonFormField<String>(
-                    initialValue: selectedDepartmentId,
-                    style: const TextStyle(fontSize: 12),
+                    value: selectedDepartmentId,
+                    style: const TextStyle(fontSize: 12, color: Colors.black),
                     decoration: const InputDecoration(
                       labelText: 'Department',
                       labelStyle: TextStyle(fontSize: 12),
@@ -680,11 +923,11 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: selectedYear,
-                    style: const TextStyle(fontSize: 12),
+                    value: selectedYear,
+                    style: const TextStyle(fontSize: 12, color: Colors.black),
                     decoration: const InputDecoration(
                       labelText: 'Year of Registration',
-                      labelStyle: TextStyle(fontSize: 12),
+                      labelStyle: TextStyle(fontSize: 12, color: Colors.black),
                       border: OutlineInputBorder(),
                       contentPadding:
                           EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -701,49 +944,77 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
             ),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel')),
+                onPressed: _isLoading ? null : () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
               ElevatedButton(
-                onPressed: () async {
-                  if (firstNameCtrl.text.isEmpty ||
-                      lastNameCtrl.text.isEmpty ||
-                      emailCtrl.text.isEmpty ||
-                      phoneCtrl.text.isEmpty ||
-                      selectedDepartmentId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Please fill all fields'),
-                          backgroundColor: AppConstants.errorColor),
-                    );
-                    return;
-                  }
-                  final provider =
-                      Provider.of<AdminProvider>(context, listen: false);
-                  final dept = provider.departments
-                      .firstWhere((d) => d.id == selectedDepartmentId);
-                  final staff = StaffData(
-                    firstName: firstNameCtrl.text.trim(),
-                    middleName: middleNameCtrl.text.trim(),
-                    lastName: lastNameCtrl.text.trim(),
-                    email: emailCtrl.text.trim(),
-                    phone: phoneCtrl.text.trim(),
-                    departmentId: selectedDepartmentId!,
-                    departmentCode: dept.code,
-                    year: int.parse(selectedYear),
-                  );
-                  String? regNo = await provider.registerStaff(staff);
-                  if (regNo != null) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text('Staff registered! RegNo: $regNo'),
-                          backgroundColor: AppConstants.successColor),
-                    );
-                  }
-                },
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (firstNameCtrl.text.isEmpty ||
+                            lastNameCtrl.text.isEmpty ||
+                            emailCtrl.text.isEmpty ||
+                            phoneCtrl.text.isEmpty ||
+                            selectedDepartmentId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Please fill all fields'),
+                                backgroundColor: AppConstants.errorColor),
+                          );
+                          return;
+                        }
+
+                        setState(() => _isLoading = true);
+
+                        final provider =
+                            Provider.of<AdminProvider>(context, listen: false);
+                        final dept = provider.departments
+                            .firstWhere((d) => d.id == selectedDepartmentId);
+                        final staff = StaffData(
+                          firstName: firstNameCtrl.text.trim(),
+                          middleName: middleNameCtrl.text.trim(),
+                          lastName: lastNameCtrl.text.trim(),
+                          email: emailCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim(),
+                          departmentId: selectedDepartmentId!,
+                          departmentCode: dept.code,
+                          year: int.parse(selectedYear),
+                        );
+                        String? regNo = await provider.registerStaff(staff);
+                        setState(() => _isLoading = false);
+
+                        if (regNo != null) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content:
+                                    Text('Staff registered! RegNo: $regNo'),
+                                backgroundColor: AppConstants.successColor),
+                          );
+                          await _loadAllData(provider);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text(provider.error ?? 'Registration failed'),
+                              backgroundColor: AppConstants.errorColor,
+                            ),
+                          );
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: AppConstants.primaryColor),
-                child: const Text('Register'),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Register'),
               ),
             ],
           );
@@ -760,9 +1031,11 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
     final emailCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final passwordCtrl = TextEditingController();
+    bool _isLoading = false;
 
     showDialog(
       context: context,
+      barrierDismissible: !_isLoading,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Register Admin',
@@ -784,54 +1057,72 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: _isLoading ? null : () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-            onPressed: () async {
-              if (firstNameCtrl.text.isEmpty ||
-                  lastNameCtrl.text.isEmpty ||
-                  emailCtrl.text.isEmpty ||
-                  phoneCtrl.text.isEmpty ||
-                  passwordCtrl.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Please fill all fields'),
-                      backgroundColor: AppConstants.errorColor),
-                );
-                return;
-              }
-              // We'll use the registerAdmin method from provider
-              final provider =
-                  Provider.of<AdminProvider>(context, listen: false);
-              final adminData = {
-                'firstName': firstNameCtrl.text.trim(),
-                'middleName': middleNameCtrl.text.trim(),
-                'lastName': lastNameCtrl.text.trim(),
-                'email': emailCtrl.text.trim(),
-                'phone': phoneCtrl.text.trim(),
-                'password': passwordCtrl.text.trim(),
-              };
-              String? regNo = await provider.registerAdmin(adminData);
-              if (regNo != null) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Admin registered! RegNo: $regNo'),
-                    backgroundColor: AppConstants.successColor,
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(provider.error ?? 'Registration failed'),
-                    backgroundColor: AppConstants.errorColor,
-                  ),
-                );
-              }
-            },
+            onPressed: _isLoading
+                ? null
+                : () async {
+                    if (firstNameCtrl.text.isEmpty ||
+                        lastNameCtrl.text.isEmpty ||
+                        emailCtrl.text.isEmpty ||
+                        phoneCtrl.text.isEmpty ||
+                        passwordCtrl.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Please fill all fields'),
+                            backgroundColor: AppConstants.errorColor),
+                      );
+                      return;
+                    }
+
+                    setState(() => _isLoading = true);
+
+                    final provider =
+                        Provider.of<AdminProvider>(context, listen: false);
+                    final adminData = {
+                      'firstName': firstNameCtrl.text.trim(),
+                      'middleName': middleNameCtrl.text.trim(),
+                      'lastName': lastNameCtrl.text.trim(),
+                      'email': emailCtrl.text.trim(),
+                      'phone': phoneCtrl.text.trim(),
+                      'password': passwordCtrl.text.trim(),
+                    };
+                    String? regNo = await provider.registerAdmin(adminData);
+                    setState(() => _isLoading = false);
+
+                    if (regNo != null) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Admin registered! RegNo: $regNo'),
+                          backgroundColor: AppConstants.successColor,
+                        ),
+                      );
+                      await _loadAllData(provider);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content:
+                              Text(provider.error ?? 'Registration failed'),
+                          backgroundColor: AppConstants.errorColor,
+                        ),
+                      );
+                    }
+                  },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppConstants.primaryColor),
-            child: const Text('Register'),
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Text('Register'),
           ),
         ],
       ),

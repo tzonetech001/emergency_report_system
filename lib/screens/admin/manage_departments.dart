@@ -208,7 +208,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
           Row(
             children: [
               IconButton(
-                icon: Icon(
+                icon: const Icon(
                   Icons.edit,
                   size: 20,
                   color: AppConstants.primaryColor,
@@ -317,7 +317,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
               const SizedBox(height: 12),
               // 👇 Category dropdown – required
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 style: const TextStyle(fontSize: 12),
                 decoration: const InputDecoration(
                   labelText: 'Category *',
@@ -422,7 +422,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 style: const TextStyle(fontSize: 12),
                 decoration: const InputDecoration(
                   labelText: 'Category *',

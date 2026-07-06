@@ -380,7 +380,7 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _selectedStatus,
+                    initialValue: _selectedStatus,
                     style: const TextStyle(fontSize: 12),
                     decoration: InputDecoration(
                       labelText: 'Status',

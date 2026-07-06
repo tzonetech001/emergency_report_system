@@ -21,7 +21,7 @@ class _ProfilePageState extends State<ProfilePage> {
   
   bool _isEditing = false;
   bool _isSaving = false;
-  bool _showPassword = false;
+  final bool _showPassword = false;
 
   @override
   void initState() {
@@ -114,11 +114,11 @@ class _ProfilePageState extends State<ProfilePage> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [
-                    const Color(0xFF5FA4ED),
-                    const Color(0xFF7BB8F0),
-                    const Color(0xFF3A7CBD),
+                    Color(0xFF5FA4ED),
+                    Color(0xFF7BB8F0),
+                    Color(0xFF3A7CBD),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -755,7 +755,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Expanded(
             child: Text(
               value,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: Colors.black87,

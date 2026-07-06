@@ -281,7 +281,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       ),
                       child: Text(
                         code,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
                           color: AppConstants.primaryColor,
@@ -331,7 +331,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
           Row(
             children: [
               IconButton(
-                icon: Icon(
+                icon: const Icon(
                   Icons.edit,
                   size: 20,
                   color: AppConstants.primaryColor,
@@ -513,7 +513,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                       keyboardType: TextInputType.phone),
                   // Department dropdown
                   DropdownButtonFormField<String>(
-                    value: selectedDepartmentId,
+                    initialValue: selectedDepartmentId,
                     style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
                       labelText: 'Department',
@@ -535,7 +535,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   const SizedBox(height: 12),
                   // Course dropdown
                   DropdownButtonFormField<String>(
-                    value: selectedCourseId,
+                    initialValue: selectedCourseId,
                     style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
                       labelText: 'Course',
@@ -553,7 +553,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   const SizedBox(height: 12),
                   // Year dropdown (2024-2030)
                   DropdownButtonFormField<String>(
-                    value: selectedYear,
+                    initialValue: selectedYear,
                     style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
                       labelText: 'Year of Registration',
@@ -663,7 +663,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   _buildTextField(phoneCtrl, 'Phone Number',
                       keyboardType: TextInputType.phone),
                   DropdownButtonFormField<String>(
-                    value: selectedDepartmentId,
+                    initialValue: selectedDepartmentId,
                     style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
                       labelText: 'Department',
@@ -680,7 +680,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen>
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: selectedYear,
+                    initialValue: selectedYear,
                     style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
                       labelText: 'Year of Registration',

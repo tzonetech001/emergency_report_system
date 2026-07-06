@@ -48,12 +48,36 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> logout() async {
-    await _repository.logout();
-    await SessionManager.logout();
-    _currentUser = null;
-    notifyListeners();
+  // lib/providers.dart (inside AuthProvider class)
+
+// Check if user is already logged in (called on app start)
+Future<bool> checkAuthStatus() async {
+  final isLoggedIn = await SessionManager.isLoggedIn();
+  if (!isLoggedIn) return false;
+
+  try {
+    final userId = await SessionManager.getUserId();
+    if (userId == null) return false;
+
+    // Fetch user data from Firestore using userId
+    final user = await _repository.getUserById(userId);
+    if (user != null) {
+      _currentUser = user;
+      notifyListeners();
+      return true;
+    }
+    return false;
+  } catch (e) {
+    return false;
   }
+}
+
+Future<void> logout() async {
+  await _repository.logout();
+  await SessionManager.logout();
+  _currentUser = null;
+  notifyListeners();
+}
 
   Future<bool> resetPassword(String email, String phone, String newPassword) async {
     _isLoading = true;
@@ -611,7 +635,7 @@ Future<void> loadAdmins() async {
 }
 
 class StudentProvider extends ChangeNotifier {
-  bool _isLoading = false;
+  final bool _isLoading = false;
   String? _error;
 
   bool get isLoading => _isLoading;
@@ -619,7 +643,7 @@ class StudentProvider extends ChangeNotifier {
 }
 
 class StaffProvider extends ChangeNotifier {
-  bool _isLoading = false;
+  final bool _isLoading = false;
   String? _error;
 
   bool get isLoading => _isLoading;

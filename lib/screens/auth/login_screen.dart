@@ -1,6 +1,7 @@
 // lib/screens/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers.dart';
 import '../../constants.dart';
 import '../../utils.dart';
@@ -17,6 +18,54 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberedRegNo();
+    _checkIfAlreadyLoggedIn(); // 👈 Check if already logged in
+  }
+
+  // ✅ Check if user is already logged in
+  Future<void> _checkIfAlreadyLoggedIn() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isLoggedIn = await authProvider.checkAuthStatus();
+    
+    if (isLoggedIn && authProvider.currentUser != null) {
+      // User is already logged in - redirect to dashboard
+      final role = authProvider.currentUser!.role;
+      
+      if (role == AppConstants.roleAdmin) {
+        Navigator.pushReplacementNamed(context, '/admin-dash');
+      } else if (role == AppConstants.roleStudent) {
+        Navigator.pushReplacementNamed(context, '/student-dash');
+      } else if (role == AppConstants.roleStaff) {
+        Navigator.pushReplacementNamed(context, '/staff-dash');
+      }
+    }
+  }
+
+  // ✅ Load remembered registration number
+  Future<void> _loadRememberedRegNo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rememberedRegNo = prefs.getString('remembered_reg_no');
+    if (rememberedRegNo != null && rememberedRegNo.isNotEmpty) {
+      setState(() {
+        _regNoController.text = rememberedRegNo;
+        _rememberMe = true;
+      });
+    }
+  }
+
+  // ✅ Save Remember Me preference
+  Future<void> _saveRememberMe(bool remember, String regNo) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (remember && regNo.isNotEmpty) {
+      await prefs.setString('remembered_reg_no', regNo);
+    } else {
+      await prefs.remove('remembered_reg_no');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,10 +225,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   await authProvider.login(regNo, password);
 
                               if (success) {
-                                // 👇 Use provider's currentUser instead of SessionManager
+                                // ✅ Save Remember Me preference
+                                await _saveRememberMe(_rememberMe, regNo);
+
+                                // Redirect based on role
                                 String role =
                                     authProvider.currentUser?.role ?? '';
-                                print('🔑 Logged in as: $role'); // Debug
+                                print('🔑 Logged in as: $role');
 
                                 if (role == AppConstants.roleAdmin) {
                                   Navigator.pushReplacementNamed(
@@ -191,7 +243,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Navigator.pushReplacementNamed(
                                       context, '/staff-dash');
                                 } else {
-                                  // Fallback – should not happen
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(

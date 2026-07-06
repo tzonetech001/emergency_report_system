@@ -232,7 +232,7 @@ class _ManageCoursesScreenState extends State<ManageCoursesScreen> {
           Row(
             children: [
               IconButton(
-                icon: Icon(
+                icon: const Icon(
                   Icons.edit,
                   size: 20,
                   color: AppConstants.primaryColor,
@@ -292,7 +292,7 @@ class _ManageCoursesScreenState extends State<ManageCoursesScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: _selectedDepartmentId,
+                    initialValue: _selectedDepartmentId,
                     style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
                       labelText: 'Select Department',
@@ -415,7 +415,7 @@ class _ManageCoursesScreenState extends State<ManageCoursesScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: _selectedDepartmentId,
+                    initialValue: _selectedDepartmentId,
                     style: const TextStyle(fontSize: 12),
                     decoration: const InputDecoration(
                       labelText: 'Department',

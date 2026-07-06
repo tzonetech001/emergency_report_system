@@ -63,7 +63,7 @@ class NotificationsScreen extends StatelessWidget {
                     color: AppConstants.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.notifications,
                     color: AppConstants.primaryColor,
                     size: 20,

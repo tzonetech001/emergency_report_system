@@ -106,38 +106,83 @@ class Utils {
     return 1;
   }
 }
+// lib/utils.dart (replace the SessionManager class only)
 
 class SessionManager {
-  static SharedPreferences? _prefs;
-  
-  static Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
-  }
-  
+  static const String _keyUserId = 'user_id';
+  static const String _keyRegNo = 'user_reg_no';
+  static const String _keyRole = 'user_role';
+  static const String _keyDepartmentId = 'user_department_id';
+  static const String _keyIsLoggedIn = 'is_logged_in';
+
+  // Save user data after login
   static Future<void> saveUserData({
     required String userId,
     required String regNo,
     required String role,
     String? departmentId,
   }) async {
-    await _prefs?.setString('userId', userId);
-    await _prefs?.setString('regNo', regNo);
-    await _prefs?.setString('role', role);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserId, userId);
+    await prefs.setString(_keyRegNo, regNo);
+    await prefs.setString(_keyRole, role);
+    await prefs.setBool(_keyIsLoggedIn, true);
     if (departmentId != null) {
-      await _prefs?.setString('departmentId', departmentId);
+      await prefs.setString(_keyDepartmentId, departmentId);
     }
   }
-  
-  static String? getUserId() => _prefs?.getString('userId');
-  static String? getRegNo() => _prefs?.getString('regNo');
-  static String? getRole() => _prefs?.getString('role');
-  static String? getDepartmentId() => _prefs?.getString('departmentId');
-  
-  static bool isLoggedIn() {
-    return _prefs?.getString('userId') != null;
+
+  // Get user ID
+  static Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserId);
   }
-  
+
+  // Get registration number
+  static Future<String?> getRegNo() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyRegNo);
+  }
+
+  // Get role
+  static Future<String?> getRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyRole);
+  }
+
+  // Get department ID
+  static Future<String?> getDepartmentId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyDepartmentId);
+  }
+
+  // Check if user is logged in
+  static Future<bool> isLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyIsLoggedIn) ?? false;
+  }
+
+  // Clear all session data (logout)
   static Future<void> logout() async {
-    await _prefs?.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyUserId);
+    await prefs.remove(_keyRegNo);
+    await prefs.remove(_keyRole);
+    await prefs.remove(_keyDepartmentId);
+    await prefs.setBool(_keyIsLoggedIn, false);
+  }
+
+  // Get all user data as a map
+  static Future<Map<String, String>?> getUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool(_keyIsLoggedIn) ?? false;
+    if (!isLoggedIn) return null;
+
+    return {
+      'userId': prefs.getString(_keyUserId) ?? '',
+      'regNo': prefs.getString(_keyRegNo) ?? '',
+      'role': prefs.getString(_keyRole) ?? '',
+      'departmentId': prefs.getString(_keyDepartmentId) ?? '',
+    };
   }
 }

@@ -212,15 +212,15 @@ class MorePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
                       Icon(
                         Icons.info_outline,
                         size: 18,
                         color: AppConstants.primaryColor,
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
+                      SizedBox(width: 8),
+                      Text(
                         'System Information',
                         style: TextStyle(
                           fontSize: 13,
@@ -355,7 +355,7 @@ class MorePage extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: Colors.black87,

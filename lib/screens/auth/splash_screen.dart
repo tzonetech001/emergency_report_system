@@ -1,6 +1,8 @@
 // lib/screens/auth/splash_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers.dart';
 import '../../constants.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -34,12 +36,44 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
     
     _controller.forward();
+    
+    // Check authentication status after splash animation
+    _checkAuthStatus();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    // Wait for splash animation
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isLoggedIn = await authProvider.checkAuthStatus();
+
+    if (!mounted) return;
+
+    if (isLoggedIn && authProvider.currentUser != null) {
+      // User is logged in - redirect based on role
+      final role = authProvider.currentUser!.role;
+      if (role == AppConstants.roleAdmin) {
+        Navigator.pushReplacementNamed(context, '/admin-dash');
+      } else if (role == AppConstants.roleStudent) {
+        Navigator.pushReplacementNamed(context, '/student-dash');
+      } else if (role == AppConstants.roleStaff) {
+        Navigator.pushReplacementNamed(context, '/staff-dash');
+      } else {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } else {
+      // Not logged in - go to login
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   @override
@@ -69,7 +103,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         ),
                       ],
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.school,
                       size: 60,
                       color: AppConstants.primaryColor,
@@ -82,7 +116,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               
               FadeTransition(
                 opacity: _fadeAnimation,
-                child: Text(
+                child: const Text(
                   AppConstants.appName,
                   style: const TextStyle(
                     fontSize: 24,
@@ -96,7 +130,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               
               FadeTransition(
                 opacity: _fadeAnimation,
-                child: Text(
+                child: const Text(
                   'Welcome to NIT',
                   style: const TextStyle(
                     fontSize: 14,

@@ -63,7 +63,7 @@ class _RegisterStaffPopupState extends State<RegisterStaffPopup> {
                     color: AppConstants.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.person_add_alt_1,
                     color: AppConstants.primaryColor,
                     size: 28,
@@ -104,7 +104,7 @@ class _RegisterStaffPopupState extends State<RegisterStaffPopup> {
                       size: 48,
                     ),
                     const SizedBox(height: 8),
-                    Text(
+                    const Text(
                       'Staff Registered Successfully!',
                       style: TextStyle(
                         fontSize: 14,
@@ -407,19 +407,19 @@ class _RegisterStaffPopupState extends State<RegisterStaffPopup> {
                             color: AppConstants.primaryColor.withOpacity(0.2),
                           ),
                         ),
-                        child: Row(
+                        child: const Row(
                           children: [
                             Icon(
                               Icons.info_outline,
                               size: 16,
                               color: AppConstants.primaryColor,
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Reg No will be auto-generated as NIT/DEPT/YEAR/XXXX\n'
                                 'Default Password: lastname@year',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 10,
                                   color: Colors.grey,
                                 ),

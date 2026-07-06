@@ -11,6 +11,25 @@ class AuthRepository {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // lib/repositories.dart (inside AuthRepository class)
+
+// Get user by ID from Firestore
+  Future<UserModel?> getUserById(String userId) async {
+    try {
+      DocumentSnapshot doc = await _firestore
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .get();
+
+      if (doc.exists) {
+        return UserModel.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<UserModel> login(String regNo, String password) async {
     try {
       regNo = regNo.trim().toUpperCase();
@@ -141,21 +160,6 @@ class AdminRepository {
   }
 
   // In repositories.dart (AdminRepository class)
-  Future<UserModel?> getUserById(String userId) async {
-    try {
-      DocumentSnapshot doc = await _firestore
-          .collection(AppConstants.usersCollection)
-          .doc(userId)
-          .get();
-
-      if (doc.exists) {
-        return UserModel.fromFirestore(doc);
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
 
   Future<void> deleteCourse(String id) async {
     await _firestore

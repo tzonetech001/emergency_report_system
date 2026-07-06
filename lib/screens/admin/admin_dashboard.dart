@@ -338,11 +338,11 @@ class _AdminHomeScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [
-                    const Color(0xFF5FA4ED),
-                    const Color(0xFF7BB8F0),
-                    const Color(0xFF3A7CBD),
+                    Color(0xFF5FA4ED),
+                    Color(0xFF7BB8F0),
+                    Color(0xFF3A7CBD),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -559,7 +559,7 @@ class _AdminHomeScreen extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [
                       AppConstants.primaryColor,
                       AppConstants.primaryLight,
@@ -855,7 +855,7 @@ class _AdminHomeScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             _buildInfoChip('Firestore'),
                             const SizedBox(width: 8),
-                            _buildInfoChip('${activeDepartments} Depts'),
+                            _buildInfoChip('$activeDepartments Depts'),
                           ],
                         ),
                       ],

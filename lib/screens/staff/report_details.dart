@@ -1,6 +1,7 @@
 // lib/screens/staff/report_details.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../../providers.dart';
@@ -90,7 +91,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                   const Spacer(),
                   // Status indicator
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: statusColor.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(20),
@@ -142,7 +144,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(16),
@@ -170,7 +173,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                       const Spacer(),
                       // Report ID
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(8),
@@ -368,6 +372,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                                   'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                               userAgentPackageName:
                                   'com.nit.emergency_report_system',
+                              tileProvider:
+                                  CancellableNetworkTileProvider(), // 👈 add this line
                             ),
                             MarkerLayer(
                               markers: [
@@ -583,7 +589,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                         value: 'pending',
                         child: Row(
                           children: [
-                            Icon(Icons.pending_outlined, size: 18, color: Colors.orange),
+                            Icon(Icons.pending_outlined,
+                                size: 18, color: Colors.orange),
                             SizedBox(width: 8),
                             Text('Pending'),
                           ],
@@ -593,7 +600,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                         value: 'in-progress',
                         child: Row(
                           children: [
-                            Icon(Icons.hourglass_top, size: 18, color: Colors.blue),
+                            Icon(Icons.hourglass_top,
+                                size: 18, color: Colors.blue),
                             SizedBox(width: 8),
                             Text('In Progress'),
                           ],
@@ -603,7 +611,8 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
                         value: 'resolved',
                         child: Row(
                           children: [
-                            Icon(Icons.check_circle_outlined, size: 18, color: Colors.green),
+                            Icon(Icons.check_circle_outlined,
+                                size: 18, color: Colors.green),
                             SizedBox(width: 8),
                             Text('Resolved'),
                           ],
@@ -719,49 +728,72 @@ class _ReportDetailsScreenState extends State<ReportDetailsScreen> {
   // ==================== HELPER METHODS ====================
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'education': return const Color(0xFF4CAF50);
-      case 'health': return const Color(0xFFE74C3C);
-      case 'security': return const Color(0xFFF39C12);
-      case 'dean': return const Color(0xFF9B59B6);
-      default: return Colors.grey;
+      case 'education':
+        return const Color(0xFF4CAF50);
+      case 'health':
+        return const Color(0xFFE74C3C);
+      case 'security':
+        return const Color(0xFFF39C12);
+      case 'dean':
+        return const Color(0xFF9B59B6);
+      default:
+        return Colors.grey;
     }
   }
 
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'education': return Icons.school;
-      case 'health': return Icons.health_and_safety;
-      case 'security': return Icons.security;
-      case 'dean': return Icons.account_balance;
-      default: return Icons.category;
+      case 'education':
+        return Icons.school;
+      case 'health':
+        return Icons.health_and_safety;
+      case 'security':
+        return Icons.security;
+      case 'dean':
+        return Icons.account_balance;
+      default:
+        return Icons.category;
     }
   }
 
   String _getCategoryLabel(String category) {
     switch (category.toLowerCase()) {
-      case 'education': return 'Education';
-      case 'health': return 'Health';
-      case 'security': return 'Security';
-      case 'dean': return 'Dean';
-      default: return category;
+      case 'education':
+        return 'Education';
+      case 'health':
+        return 'Health';
+      case 'security':
+        return 'Security';
+      case 'dean':
+        return 'Dean';
+      default:
+        return category;
     }
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'pending': return Colors.orange;
-      case 'in-progress': return Colors.blue;
-      case 'resolved': return Colors.green;
-      default: return Colors.grey;
+      case 'pending':
+        return Colors.orange;
+      case 'in-progress':
+        return Colors.blue;
+      case 'resolved':
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
   String _getStatusLabel(String status) {
     switch (status) {
-      case 'pending': return 'Pending';
-      case 'in-progress': return 'In Progress';
-      case 'resolved': return 'Resolved';
-      default: return 'Unknown';
+      case 'pending':
+        return 'Pending';
+      case 'in-progress':
+        return 'In Progress';
+      case 'resolved':
+        return 'Resolved';
+      default:
+        return 'Unknown';
     }
   }
 }

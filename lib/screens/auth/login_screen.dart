@@ -1,6 +1,7 @@
 // lib/screens/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers.dart';
 import '../../constants.dart';
 import '../../utils.dart';
@@ -17,6 +18,52 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
+// lib/screens/auth/login_screen.dart (inside _LoginScreenState)
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberedRegNo();
+    _checkIfAlreadyLoggedIn();
+  }
+
+  Future<void> _checkIfAlreadyLoggedIn() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isLoggedIn = await authProvider.checkAuthStatus();
+
+    if (isLoggedIn && authProvider.currentUser != null) {
+      // User is already logged in - redirect to dashboard
+      final role = authProvider.currentUser!.role;
+
+      if (role == AppConstants.roleAdmin) {
+        Navigator.pushReplacementNamed(context, '/admin-dash');
+      } else if (role == AppConstants.roleStudent) {
+        Navigator.pushReplacementNamed(context, '/student-dash');
+      } else if (role == AppConstants.roleStaff) {
+        Navigator.pushReplacementNamed(context, '/staff-dash');
+      }
+    }
+  }
+
+  Future<void> _loadRememberedRegNo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rememberedRegNo = prefs.getString('remembered_reg_no');
+    if (rememberedRegNo != null && rememberedRegNo.isNotEmpty) {
+      setState(() {
+        _regNoController.text = rememberedRegNo;
+        _rememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _saveRememberMe(bool remember, String regNo) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (remember && regNo.isNotEmpty) {
+      await prefs.setString('remembered_reg_no', regNo);
+    } else {
+      await prefs.remove('remembered_reg_no');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
         height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: NetworkImage(
+            image: const NetworkImage(
               'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSc1gKNq-pipYogGaoVtuagtKO8NjtxBJx7LkYySN-8pA&s=10',
             ),
             fit: BoxFit.cover,
@@ -58,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 1,
                       ),
                     ),
-                    child: Text(
+                    child: const Text(
                       'NIT\nEMS',
                       style: TextStyle(
                         fontSize: 40,
@@ -117,13 +164,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ],
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.school,
                           size: 40,
                           color: AppConstants.primaryColor,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 20),
 
                       // Welcome Text
@@ -142,23 +189,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       Text(
                         'Login to your account',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.white.withOpacity(0.8),
-                          shadows: [
-                            const Shadow(
+                          shadows: const [
+                            Shadow(
                               blurRadius: 8,
                               color: Colors.black26,
                             ),
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 30),
 
                       // Login Card
@@ -205,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                 ),
-                                
+
                                 const SizedBox(height: 16),
 
                                 // Password Field
@@ -247,12 +294,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                 ),
-                                
+
                                 const SizedBox(height: 12),
 
                                 // Remember Me & Forgot Password
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
                                       children: [
@@ -263,8 +311,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                               _rememberMe = value ?? false;
                                             });
                                           },
-                                          activeColor: AppConstants.primaryColor,
-                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          activeColor:
+                                              AppConstants.primaryColor,
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
                                         ),
                                         const Text(
                                           'Remember Me',
@@ -280,7 +330,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                         );
                                       },
                                       style: TextButton.styleFrom(
-                                        foregroundColor: AppConstants.primaryColor,
+                                        foregroundColor:
+                                            AppConstants.primaryColor,
                                         padding: EdgeInsets.zero,
                                       ),
                                       child: const Text(
@@ -304,66 +355,87 @@ class _LoginScreenState extends State<LoginScreen> {
                                     onPressed: authProvider.isLoading
                                         ? null
                                         : () async {
-                                            String regNo = _regNoController.text.trim();
-                                            String password = _passwordController.text.trim();
+                                            String regNo =
+                                                _regNoController.text.trim();
+                                            String password =
+                                                _passwordController.text.trim();
 
-                                            if (regNo.isEmpty || password.isEmpty) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
+                                            if (regNo.isEmpty ||
+                                                password.isEmpty) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
                                                 const SnackBar(
-                                                  content: Text('Please fill all fields'),
-                                                  backgroundColor: AppConstants.errorColor,
+                                                  content: Text(
+                                                      'Please fill all fields'),
+                                                  backgroundColor:
+                                                      AppConstants.errorColor,
                                                 ),
                                               );
                                               return;
                                             }
 
-                                            bool success = await authProvider.login(
+                                            bool success =
+                                                await authProvider.login(
                                               regNo,
                                               password,
                                             );
 
+                                            await _saveRememberMe(
+                                                _rememberMe, regNo);
+
                                             if (success) {
-                                              String role = authProvider.currentUser?.role ?? '';
+                                              String role = authProvider
+                                                      .currentUser?.role ??
+                                                  '';
                                               print('🔑 Logged in as: $role');
 
-                                              if (role == AppConstants.roleAdmin) {
+                                              if (role ==
+                                                  AppConstants.roleAdmin) {
                                                 Navigator.pushReplacementNamed(
                                                   context,
                                                   '/admin-dash',
                                                 );
-                                              } else if (role == AppConstants.roleStudent) {
+                                              } else if (role ==
+                                                  AppConstants.roleStudent) {
                                                 Navigator.pushReplacementNamed(
                                                   context,
                                                   '/student-dash',
                                                 );
-                                              } else if (role == AppConstants.roleStaff) {
+                                              } else if (role ==
+                                                  AppConstants.roleStaff) {
                                                 Navigator.pushReplacementNamed(
                                                   context,
                                                   '/staff-dash',
                                                 );
                                               } else {
-                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
                                                   const SnackBar(
                                                     content: Text(
                                                       'Unknown user role. Please contact support.',
                                                     ),
-                                                    backgroundColor: AppConstants.errorColor,
+                                                    backgroundColor:
+                                                        AppConstants.errorColor,
                                                   ),
                                                 );
                                               }
                                             } else {
-                                              ScaffoldMessenger.of(context).showSnackBar(
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                    authProvider.error ?? 'An error occurred',
+                                                    authProvider.error ??
+                                                        'An error occurred',
                                                   ),
-                                                  backgroundColor: AppConstants.errorColor,
+                                                  backgroundColor:
+                                                      AppConstants.errorColor,
                                                 ),
                                               );
                                             }
                                           },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppConstants.primaryColor,
+                                      backgroundColor:
+                                          AppConstants.primaryColor,
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -376,7 +448,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                             height: 24,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
                                                 Colors.white,
                                               ),
                                             ),
@@ -401,12 +474,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       // Footer
                       Text(
-                         'Scar Tech Team',
+                        'NIT - National Institute of Transport',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.white.withOpacity(0.6),
-                          shadows: [
-                            const Shadow(
+                          shadows: const [
+                            Shadow(
                               blurRadius: 5,
                               color: Colors.black38,
                             ),

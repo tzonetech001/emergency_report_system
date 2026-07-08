@@ -108,6 +108,8 @@ class Utils {
 }
 // lib/utils.dart (replace the SessionManager class only)
 
+// lib/utils.dart (replace the SessionManager class only)
+
 class SessionManager {
   static const String _keyUserId = 'user_id';
   static const String _keyRegNo = 'user_reg_no';

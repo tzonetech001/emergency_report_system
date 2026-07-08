@@ -1,5 +1,7 @@
 // lib/screens/auth/splash_screen.dart
+import 'package:emergency_report_system/providers.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constants.dart';
 
@@ -35,6 +37,36 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
+    _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    // Wait for splash animation
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isLoggedIn = await authProvider.checkAuthStatus();
+
+    if (!mounted) return;
+
+    if (isLoggedIn && authProvider.currentUser != null) {
+      // User is logged in - redirect based on role
+      final role = authProvider.currentUser!.role;
+      if (role == AppConstants.roleAdmin) {
+        Navigator.pushReplacementNamed(context, '/admin-dash');
+      } else if (role == AppConstants.roleStudent) {
+        Navigator.pushReplacementNamed(context, '/student-dash');
+      } else if (role == AppConstants.roleStaff) {
+        Navigator.pushReplacementNamed(context, '/staff-dash');
+      } else {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } else {
+      // Not logged in - go to login
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   @override
@@ -51,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
         height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: NetworkImage(
+            image: const NetworkImage(
               'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSc1gKNq-pipYogGaoVtuagtKO8NjtxBJx7LkYySN-8pA&s=10',
             ),
             fit: BoxFit.cover,
@@ -123,7 +155,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 ),
                               ],
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.school,
                               size: 50,
                               color: AppConstants.primaryColor,
@@ -137,9 +169,9 @@ class _SplashScreenState extends State<SplashScreen>
                       // App Name
                       FadeTransition(
                         opacity: _fadeAnimation,
-                        child: Text(
+                        child: const Text(
                           AppConstants.appName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -184,15 +216,15 @@ class _SplashScreenState extends State<SplashScreen>
                           child: Column(
                             children: [
                               // Title Row
-                              Row(
+                              const Row(
                                 children: [
                                   Icon(
                                     Icons.info_outline,
                                     color: AppConstants.primaryColor,
                                     size: 20,
                                   ),
-                                  const SizedBox(width: 10),
-                                  const Text(
+                                  SizedBox(width: 10),
+                                  Text(
                                     'About This System',
                                     style: TextStyle(
                                       fontSize: 14,

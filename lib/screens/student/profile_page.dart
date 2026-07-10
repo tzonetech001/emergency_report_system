@@ -26,6 +26,7 @@ class StudentProfilePage extends StatelessWidget {
           name: 'Unknown',
           description: '',
           category: 'General',
+          phone: '',
           createdAt: DateTime.now(),
         ),
       );

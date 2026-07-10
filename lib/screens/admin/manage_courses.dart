@@ -272,6 +272,7 @@ class _ManageCoursesScreenState extends State<ManageCoursesScreen> {
         code: '?',
         name: 'Unknown',
         category: 'Unknown',
+        phone: '',
         description: '',
         createdAt: DateTime.now(),
       ),

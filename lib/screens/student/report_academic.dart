@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart'; // 👈 added for calling
 import '../../providers.dart';
 import '../../constants.dart';
 import '../../models.dart';
@@ -35,10 +36,26 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
   final GlobalKey _formKey = GlobalKey();
 
   final List<Map<String, dynamic>> _categories = [
-    {'name': 'Education', 'icon': Icons.school, 'color': const Color(0xFF4CAF50)},
-    {'name': 'Health', 'icon': Icons.health_and_safety, 'color': const Color(0xFFE74C3C)},
-    {'name': 'Security', 'icon': Icons.security, 'color': const Color(0xFFF39C12)},
-    {'name': 'Dean', 'icon': Icons.account_balance, 'color': const Color(0xFF9B59B6)},
+    {
+      'name': 'Education',
+      'icon': Icons.school,
+      'color': const Color(0xFF4CAF50)
+    },
+    {
+      'name': 'Health',
+      'icon': Icons.health_and_safety,
+      'color': const Color(0xFFE74C3C)
+    },
+    {
+      'name': 'Security',
+      'icon': Icons.security,
+      'color': const Color(0xFFF39C12)
+    },
+    {
+      'name': 'Dean',
+      'icon': Icons.account_balance,
+      'color': const Color(0xFF9B59B6)
+    },
   ];
 
   @override
@@ -64,7 +81,8 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
       await adminProvider.loadDepartments();
       if (!mounted) return;
       setState(() {
-        _departments = adminProvider.departments.where((d) => d.isActive).toList();
+        _departments =
+            adminProvider.departments.where((d) => d.isActive).toList();
         _loadingDepartments = false;
       });
     } catch (e) {
@@ -170,13 +188,17 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: _categories.firstWhere((c) => c['name'] == _selectedCategory)['color']
+                          color: _categories
+                              .firstWhere((c) =>
+                                  c['name'] == _selectedCategory)['color']
                               .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          _categories.firstWhere((c) => c['name'] == _selectedCategory)['icon'],
-                          color: _categories.firstWhere((c) => c['name'] == _selectedCategory)['color'],
+                          _categories.firstWhere(
+                              (c) => c['name'] == _selectedCategory)['icon'],
+                          color: _categories.firstWhere(
+                              (c) => c['name'] == _selectedCategory)['color'],
                           size: 18,
                         ),
                       ),
@@ -198,7 +220,8 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: _categories.firstWhere((c) => c['name'] == _selectedCategory)['color'],
+                                color: _categories.firstWhere((c) =>
+                                    c['name'] == _selectedCategory)['color'],
                               ),
                             ),
                           ],
@@ -226,10 +249,12 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                       filled: true,
                       fillColor: Colors.grey[50],
-                      prefixIcon: const Icon(Icons.business, size: 18, color: Colors.grey),
+                      prefixIcon: const Icon(Icons.business,
+                          size: 18, color: Colors.grey),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -249,12 +274,15 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Enter a brief title...',
-                      hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                      hintStyle:
+                          TextStyle(fontSize: 12, color: Colors.grey[400]),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      prefixIcon: const Icon(Icons.title, size: 18, color: Colors.grey),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      prefixIcon:
+                          const Icon(Icons.title, size: 18, color: Colors.grey),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -275,12 +303,15 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                     maxLines: 5,
                     decoration: InputDecoration(
                       hintText: 'Describe the issue in detail...',
-                      hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                      hintStyle:
+                          TextStyle(fontSize: 12, color: Colors.grey[400]),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      prefixIcon: const Icon(Icons.description, size: 18, color: Colors.grey),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      prefixIcon: const Icon(Icons.description,
+                          size: 18, color: Colors.grey),
                       alignLabelWithHint: true,
                     ),
                   ),
@@ -315,24 +346,31 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                               const Spacer(),
                               if (_location != null)
                                 IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.red, size: 18),
+                                  icon: const Icon(Icons.close,
+                                      color: Colors.red, size: 18),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
-                                  onPressed: () => setState(() => _location = null),
+                                  onPressed: () =>
+                                      setState(() => _location = null),
                                 ),
                               SizedBox(
                                 height: 34,
                                 child: ElevatedButton.icon(
-                                  onPressed: _isGettingLocation ? null : _getCurrentLocation,
+                                  onPressed: _isGettingLocation
+                                      ? null
+                                      : _getCurrentLocation,
                                   icon: _isGettingLocation
                                       ? const SizedBox(
                                           width: 14,
                                           height: 14,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
                                         )
                                       : const Icon(Icons.my_location, size: 14),
                                   label: Text(
-                                    _location == null ? 'Get Location' : 'Update',
+                                    _location == null
+                                        ? 'Get Location'
+                                        : 'Update',
                                     style: const TextStyle(fontSize: 10),
                                   ),
                                   style: ElevatedButton.styleFrom(
@@ -360,15 +398,18 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.green.withOpacity(0.08),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green.withOpacity(0.2)),
+                                border: Border.all(
+                                    color: Colors.green.withOpacity(0.2)),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.location_on, color: Colors.green, size: 16),
+                                  const Icon(Icons.location_on,
+                                      color: Colors.green, size: 16),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      _location!['address'] ?? 'Location captured',
+                                      _location!['address'] ??
+                                          'Location captured',
                                       style: const TextStyle(fontSize: 12),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -383,7 +424,7 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Submit Button - FIXED
+                  // Submit Button
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -404,7 +445,8 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                               height: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
                           : const Text(
@@ -417,6 +459,62 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
                             ),
                     ),
                   ),
+
+                  // ================================
+                  // 👇 NEW: OR divider + Call button
+                  // ================================
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider(thickness: 1)),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'OR',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                      const Expanded(child: Divider(thickness: 1)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final phone = _selectedDepartment!.phone.trim();
+                        if (phone.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'No phone number available for this department.'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                          return;
+                        }
+                        _makePhoneCall(phone);
+                      },
+                      icon: const Icon(Icons.phone, size: 18),
+                      label: const Text(
+                        'Call Department',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppConstants.successColor,
+                        side: BorderSide(color: AppConstants.successColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -425,6 +523,7 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
     );
   }
 
+  // ---------- Category Card ----------
   Widget _buildCategoryCard(
     String category,
     IconData icon,
@@ -434,7 +533,8 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
     return GestureDetector(
       onTap: () {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        DepartmentModel? newDept = _getDepartmentForCategory(category, authProvider);
+        DepartmentModel? newDept =
+            _getDepartmentForCategory(category, authProvider);
         setState(() {
           _selectedCategory = category;
           _location = null;
@@ -485,7 +585,9 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withOpacity(0.2) : color.withOpacity(0.1),
+                color: isSelected
+                    ? Colors.white.withOpacity(0.2)
+                    : color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -520,7 +622,9 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
     );
   }
 
-  DepartmentModel? _getDepartmentForCategory(String category, AuthProvider authProvider) {
+  // ---------- Get Department ----------
+  DepartmentModel? _getDepartmentForCategory(
+      String category, AuthProvider authProvider) {
     final user = authProvider.currentUser;
     if (category == 'Education') {
       final deptId = user?.departmentId;
@@ -534,12 +638,14 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
       if (_departments.isNotEmpty) return _departments.first;
       return null;
     } else {
-      final candidates = _departments.where((d) => d.category == category).toList();
+      final candidates =
+          _departments.where((d) => d.category == category).toList();
       if (candidates.isNotEmpty) return candidates.first;
       return null;
     }
   }
 
+  // ---------- Scroll ----------
   void _scrollToForm() {
     if (_formKey.currentContext != null) {
       Scrollable.ensureVisible(
@@ -550,7 +656,7 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
     }
   }
 
-  // ==================== Location Methods ====================
+  // ---------- Location Methods ----------
   Future<void> _getCurrentLocation() async {
     var status = await Permission.location.request();
     if (status.isDenied) {
@@ -613,7 +719,24 @@ class _ReportAcademicScreenState extends State<ReportAcademicScreen> {
     }
   }
 
-  // ==================== Submit Report ====================
+  // ---------- Make Phone Call ----------
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri phoneUri = Uri.parse('tel:$phoneNumber');
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not launch phone dialer.'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  // ---------- Submit Report ----------
   Future<void> _submitReport() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final reportProvider = Provider.of<ReportProvider>(context, listen: false);

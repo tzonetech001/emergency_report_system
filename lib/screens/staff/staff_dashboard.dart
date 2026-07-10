@@ -484,6 +484,7 @@ class _StaffHomeScreen extends StatelessWidget {
           name: 'Loading...',
           description: '',
           category: 'General',
+          phone: '',
           createdAt: DateTime.now(),
         ),
       );

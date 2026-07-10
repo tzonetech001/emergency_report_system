@@ -17,17 +17,17 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   final TextEditingController _codeController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _phoneController =
+      TextEditingController(); // 👈 new
   final TextEditingController _searchController = TextEditingController();
 
   bool _isAdding = false;
   String? _editingId;
   String _searchQuery = '';
-  String? _selectedCategory; // 👈 category selection
+  String? _selectedCategory;
 
-  // Category list
   final List<String> _categories = ['Education', 'Health', 'Security', 'Dean'];
 
-  // Category colors
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'Education':
@@ -41,6 +41,10 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
       default:
         return Colors.grey;
     }
+  }
+
+  bool _isValidPhone(String phone) {
+    return RegExp(r'^[0-9]{10,15}$').hasMatch(phone);
   }
 
   @override
@@ -61,6 +65,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -68,13 +73,13 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   Widget build(BuildContext context) {
     final adminProvider = Provider.of<AdminProvider>(context);
 
-    // Filter departments based on search query
     final filteredDepartments = adminProvider.departments.where((dept) {
       if (_searchQuery.isEmpty) return true;
       return dept.name.toLowerCase().contains(_searchQuery) ||
           dept.code.toLowerCase().contains(_searchQuery) ||
           dept.description.toLowerCase().contains(_searchQuery) ||
-          dept.category.toLowerCase().contains(_searchQuery);
+          dept.category.toLowerCase().contains(_searchQuery) ||
+          dept.phone.contains(_searchQuery);
     }).toList();
 
     return Scaffold(
@@ -104,7 +109,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ===== HEADER ROW =====
+                // Header
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -120,7 +125,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         ),
                       ),
                       const Spacer(),
-                      // Count badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 3),
@@ -138,13 +142,9 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Refresh Button
                       IconButton(
-                        icon: const Icon(
-                          Icons.refresh,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+                        icon: const Icon(Icons.refresh,
+                            color: Colors.white, size: 20),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                         onPressed: () async {
@@ -165,7 +165,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                     ],
                   ),
                 ),
-                // ===== SEARCH BAR =====
+                // Search
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
@@ -185,11 +185,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                     child: Row(
                       children: [
                         const SizedBox(width: 8),
-                        Icon(
-                          Icons.search,
-                          color: Colors.grey[400],
-                          size: 14,
-                        ),
+                        Icon(Icons.search, color: Colors.grey[400], size: 14),
                         const SizedBox(width: 6),
                         Expanded(
                           child: TextField(
@@ -198,9 +194,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                             decoration: InputDecoration(
                               hintText: 'Search departments...',
                               hintStyle: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[400],
-                              ),
+                                  fontSize: 11, color: Colors.grey[400]),
                               border: InputBorder.none,
                               contentPadding:
                                   const EdgeInsets.symmetric(vertical: 8),
@@ -210,23 +204,18 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         ),
                         if (_searchQuery.isNotEmpty)
                           IconButton(
-                            icon: Icon(
-                              Icons.clear,
-                              color: Colors.grey[400],
-                              size: 14,
-                            ),
+                            icon: Icon(Icons.clear,
+                                color: Colors.grey[400], size: 14),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            onPressed: () {
-                              _searchController.clear();
-                            },
+                            onPressed: () => _searchController.clear(),
                           ),
                         const SizedBox(width: 6),
                       ],
                     ),
                   ),
                 ),
-                // ===== INFO ROW =====
+                // Info Row
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -241,18 +230,14 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.business_outlined,
-                              size: 12,
-                              color: Colors.white.withOpacity(0.8),
-                            ),
+                            Icon(Icons.business_outlined,
+                                size: 12, color: Colors.white.withOpacity(0.8)),
                             const SizedBox(width: 4),
                             Text(
                               'Active: ${adminProvider.departments.where((d) => d.isActive).length}',
                               style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.white.withOpacity(0.8),
-                              ),
+                                  fontSize: 10,
+                                  color: Colors.white.withOpacity(0.8)),
                             ),
                           ],
                         ),
@@ -369,7 +354,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
           border: dept.isActive
               ? Border.all(color: categoryColor.withOpacity(0.3), width: 1)
               : Border.all(color: Colors.red.withOpacity(0.3)),
-          // subtle background tint based on category
           gradient: dept.isActive
               ? LinearGradient(
                   colors: [
@@ -386,7 +370,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
           children: [
             Row(
               children: [
-                // Icon with category color
+                // Icon
                 Container(
                   width: 44,
                   height: 44,
@@ -420,15 +404,14 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                               dept.isActive ? Colors.black87 : Colors.grey[600],
                         ),
                       ),
+                      // Description
                       Row(
                         children: [
-                          Icon(
-                            Icons.description_outlined,
-                            size: 10,
-                            color: dept.isActive
-                                ? Colors.grey[500]
-                                : Colors.grey[400],
-                          ),
+                          Icon(Icons.description_outlined,
+                              size: 10,
+                              color: dept.isActive
+                                  ? Colors.grey[500]
+                                  : Colors.grey[400]),
                           const SizedBox(width: 3),
                           Text(
                             dept.description,
@@ -440,6 +423,26 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                      // 👇 Phone row
+                      Row(
+                        children: [
+                          Icon(Icons.phone,
+                              size: 10,
+                              color: dept.isActive
+                                  ? Colors.grey[500]
+                                  : Colors.grey[400]),
+                          const SizedBox(width: 3),
+                          Text(
+                            dept.phone.isEmpty ? 'No phone number' : dept.phone,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: dept.isActive
+                                  ? Colors.grey[500]
+                                  : Colors.grey[400],
+                            ),
                           ),
                         ],
                       ),
@@ -455,11 +458,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.label_outlined,
-                              size: 10,
-                              color: categoryColor,
-                            ),
+                            Icon(Icons.label_outlined,
+                                size: 10, color: categoryColor),
                             const SizedBox(width: 2),
                             Text(
                               dept.category,
@@ -504,11 +504,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.book_outlined,
-                          size: 12,
-                          color: AppConstants.primaryColor,
-                        ),
+                        const Icon(Icons.book_outlined,
+                            size: 12, color: AppConstants.primaryColor),
                         const SizedBox(width: 3),
                         Text(
                           '${departmentCourses.length}',
@@ -527,11 +524,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(
-                        Icons.edit,
-                        size: 16,
-                        color: AppConstants.primaryColor,
-                      ),
+                      icon: const Icon(Icons.edit,
+                          size: 16, color: AppConstants.primaryColor),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () => _showEditDepartmentDialog(dept),
@@ -549,11 +543,8 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                     ),
                     const SizedBox(width: 2),
                     IconButton(
-                      icon: const Icon(
-                        Icons.delete,
-                        size: 16,
-                        color: Colors.red,
-                      ),
+                      icon:
+                          const Icon(Icons.delete, size: 16, color: Colors.red),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () => _confirmDeleteDepartment(dept),
@@ -562,7 +553,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                 ),
               ],
             ),
-            // Courses row (horizontal scroll) – only if Education category
+            // Courses row – only for Education
             if (isEducation && departmentCourses.isNotEmpty) ...[
               const SizedBox(height: 8),
               const Divider(height: 1),
@@ -611,7 +602,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                 ),
               ),
             ],
-            // Show message if non-Education
             if (!isEducation) ...[
               const SizedBox(height: 6),
               Container(
@@ -816,7 +806,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                   ),
                 ),
               const SizedBox(height: 6),
-              // Add Course Button – only if Education category
               if (isEducation)
                 SizedBox(
                   width: double.infinity,
@@ -853,15 +842,15 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
 
   // ==================== ADD COURSE FOR DEPARTMENT ====================
   void _showAddCourseForDepartment(DepartmentModel dept) {
-    // (same as before – no changes needed)
+    // (unchanged – keep your existing implementation)
   }
 
   // ==================== ADD DEPARTMENT DIALOG ====================
-// ==================== ADD DEPARTMENT DIALOG ====================
   void _showAddDepartmentDialog() {
     _codeController.clear();
     _nameController.clear();
     _descriptionController.clear();
+    _phoneController.clear();
     _selectedCategory = null;
     _editingId = null;
 
@@ -878,7 +867,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             content: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.8, // 👈 finite width
+              width: MediaQuery.of(context).size.width * 0.8,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -926,7 +915,24 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    // 👇 Category dropdown – now properly constrained
+                    // 👇 Phone number field
+                    TextField(
+                      controller: _phoneController,
+                      style: const TextStyle(fontSize: 12),
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Phone Number',
+                        labelStyle: TextStyle(fontSize: 12),
+                        hintText: 'e.g., 0712345678',
+                        hintStyle: TextStyle(fontSize: 12),
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        prefixIcon: Icon(Icons.phone, size: 16),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Category dropdown
                     DropdownButtonFormField<String>(
                       value: _selectedCategory,
                       isExpanded: true,
@@ -994,11 +1000,12 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
     );
   }
 
-// ==================== EDIT DEPARTMENT DIALOG ====================
+  // ==================== EDIT DEPARTMENT DIALOG ====================
   void _showEditDepartmentDialog(DepartmentModel dept) {
     _codeController.text = dept.code;
     _nameController.text = dept.name;
     _descriptionController.text = dept.description;
+    _phoneController.text = dept.phone;
     _selectedCategory = dept.category;
     _editingId = dept.id;
 
@@ -1015,7 +1022,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             content: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.8, // 👈 finite width
+              width: MediaQuery.of(context).size.width * 0.8,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1057,7 +1064,20 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    // 👇 Category dropdown – properly constrained
+                    TextField(
+                      controller: _phoneController,
+                      style: const TextStyle(fontSize: 12),
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Phone Number',
+                        labelStyle: TextStyle(fontSize: 12),
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        prefixIcon: Icon(Icons.phone, size: 16),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       value: _selectedCategory,
                       isExpanded: true,
@@ -1193,6 +1213,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
 
   // ==================== ADD DEPARTMENT ====================
   Future<void> _addDepartment() async {
+    // Validate required fields
     if (_codeController.text.isEmpty || _nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1212,6 +1233,18 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
       return;
     }
 
+    // Optional phone validation
+    final phone = _phoneController.text.trim();
+    if (phone.isNotEmpty && !_isValidPhone(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid phone number (10-15 digits)'),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isAdding = true;
     });
@@ -1224,6 +1257,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
       name: _nameController.text.trim(),
       description: _descriptionController.text.trim(),
       category: _selectedCategory!,
+      phone: phone,
       createdAt: DateTime.now(),
     );
 
@@ -1277,6 +1311,17 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
       return;
     }
 
+    final phone = _phoneController.text.trim();
+    if (phone.isNotEmpty && !_isValidPhone(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid phone number (10-15 digits)'),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isAdding = true;
     });
@@ -1288,6 +1333,7 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'category': _selectedCategory!,
+      'phone': phone,
     };
 
     bool success = await adminProvider.updateDepartment(_editingId!, data);

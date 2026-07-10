@@ -84,6 +84,7 @@ class DepartmentModel {
   final String name;
   final String description;
   final String category;
+  final String phone; 
   final String status;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -94,6 +95,7 @@ class DepartmentModel {
     required this.name,
     required this.description,
     required this.category,
+    required this.phone,
     this.status = AppConstants.statusActive,
     required this.createdAt,
     this.updatedAt,
@@ -109,6 +111,7 @@ class DepartmentModel {
       name: data['name'] ?? '',
       description: data['description'] ?? '',
       category: data['category'] ?? 'Education',
+      phone: data['phone'] ?? '',
       status: data['status'] ?? AppConstants.statusActive,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
@@ -121,6 +124,7 @@ class DepartmentModel {
       'name': name,
       'description': description,
       'category': category,
+      'phone': phone,
       'status': status,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
